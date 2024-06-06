@@ -1,0 +1,45 @@
+/* CSS style snippets to improve the shiny app */
+
+/* Text is stuck to right side in sidebar -> Add padding to sidebar */
+.myTopBar { 
+line-height: 50px;
+text-align: center;
+font-family: "Arial";
+padding: 0 15px;
+color: white;
+font-size: 2vw;
+    }
+@media (min-width: 1200px) {
+  .myTopBar {
+    line-height: 50px;
+    text-align: center;
+    font-family: "Arial";
+    padding: 0 15px;
+    color: white;
+    font-size: x-large
+  }
+}
+
+/* Default background color is blueish -> Change it to white */
+.content-wrapper,
+.wrapper,
+.right-side {
+  background-color: #ffffff;
+  overflow:auto;
+}
+
+/* Text is stuck to right side in sidebar -> Add padding to sidebar */
+.sidebar {
+  padding: 19px;
+}
+
+/* Spin wheels in numeric inputs are unnecessary -> Hide them */
+input[type=number] {
+      -moz-appearance:textfield;
+}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+}
+
