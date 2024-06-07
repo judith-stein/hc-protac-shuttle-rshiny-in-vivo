@@ -77,6 +77,12 @@ ui <- shinyUI(dashboardPage(
                           <a href=\"logistic_pk_pd_equations_explained.pptx\" target=\"_blank\">PPTX</a>
                           <a href=\"logistic_pk_pd_equations_explained.pdf\" target=\"_blank\">PDF</a><br>")
           ),
+          numericInput("maxTime", "Max t (days)", value = 52),
+          numericInput("doseT", "Dose given every x day", value = 0),
+          numericInput("doseMaxT", "For a total number of times of (1 + x)", value = 0),
+          numericInput("startT", "Dosing start time (h)", value = 0), 
+          numericInput("max", "Maximum number of bound protacs per antibody (min=1 and max=4)", value = 4), 
+          br(),
           actionButton("update", "Calculate and plot"), br(), br(),
           tabsetPanel(
             id = "inputTablePanel",
@@ -94,13 +100,7 @@ ui <- shinyUI(dashboardPage(
               )
             ),
             selected = "Parameters"
-          ),
-          numericInput("thresholdTumorVolume", "Threshold tumor volume (mm^3, 0 = no limit)", value = 0),
-          numericInput("maxTime", "Max t (days)", value = 52),
-          numericInput("doseT", "Dose given every x day", value = 0),
-          numericInput("doseMaxT", "For a total number of times of (1 + x)", value = 0),
-          numericInput("startT", "Dosing start time (h)", value = 0),
-          checkboxInput("enableTmdd", "Add TMDD cell population")
+          )
         ),
         
         column(
@@ -110,12 +110,7 @@ ui <- shinyUI(dashboardPage(
             tabsetPanel(
               tabPanel(
                 "Plots",
-                plotlyOutput(outputId = "plot1", width = 600 * 1, height = 450 * 0.8),
-                plotlyOutput(outputId = "plot2", width = 600 * 1, height = 450 * 0.8),
-                plotlyOutput(outputId = "plot3", width = 600 * 1, height = 450 * 0.8),
-                plotlyOutput(outputId = "plot4", width = 600 * 1, height = 450 * 0.8),
-                br(),
-                verbatimTextOutput("AUC") 
+                plotlyOutput(outputId = "plot1", width = 600 * 1, height = 450 * 0.8)
               ),
               tabPanel("Points", dataTableOutput("resultTable")),
               tabPanel("Fitting Experimental Data",
@@ -163,69 +158,6 @@ ui <- shinyUI(dashboardPage(
                                      rows = 6
                        ),
                        plotlyOutput(outputId = "plotExpData", width = 800 * 1, height = 600 * 0.8)
-              ),
-              tabPanel("Parameter Variability", 
-                       helpText("Both standard deviations must be set!"),
-                       numericInput("std.EC50", "Standard deviation for EC50 (nM)", value = 0),
-                       numericInput("std.Ag_cell_t", "Standard deviation for receptor count on each tumor cell Ag_cell_t (1 per cell)", value = 0),
-                       numericInput("nSub", "nSub: Number between subject variabilities", value = 1),
-                       helpText("Note that nSub < 2500 is needed to create plot!"),
-                       numericInput("level", "level: % for confidence interval", value = 0.90),
-                       helpText("Probability that the value of a parameter lies within this interval.
-                                Thus, 100 - level % is the probalility that the true value lies outside the interval.
-                                The interval ranges from min = (1-level)/2 to max = 1 - min."),
-                       textAreaInput("expDataAsString2", 
-                                     HTML("Input: time (days) &lt;space&gt; V_tumor (mm^3) &lt;space&gt; deviance <br/> (space delimited and comma as decimals)"),
-                                     value = defaultExpDataAsString,
-                                     rows = 6
-                       ),
-                       helpText("Simulation is calculated without threshold tumor volume."),
-                       plotlyOutput(outputId = "plotVar", width = 600 * 1, height = 450 * 0.8)
-              ),
-              tabPanel("Waterfall Plots", 
-                       wellPanel(
-                         style = "background: #3c8dbc",
-                         span("3D-plot options:", style = "color:white"),
-                         textAreaInput(
-                           "xAxisInstructions",
-                           "Instructions for X-axis",
-                           LoadDataDefault("default/defaultXAxisInstructions.json"),
-                           rows = 5
-                         ),
-                         selectInput("xAxisItem", "Choose X-axis:",
-                                     list(
-                                       `Initial conditions` = LoadData("default/defaultConditions.tsv")[[1]],
-                                       `Parameters` = LoadData("default/defaultParameters.tsv")[[1]]
-                                     ),
-                                     selected = "Ag_cell_t"
-                         ),
-                         textAreaInput(
-                           "yAxisInstructions",
-                           "Instructions for Y-axis",
-                           LoadDataDefault("default/defaultYAxisInstructions.json"),
-                           rows = 6
-                         ),
-                         selectInput("yAxisItem", "Choose Y-axis:",
-                                     list(
-                                       `Initial conditions` = LoadData("default/defaultConditions.tsv")[[1]],
-                                       `Parameters` = LoadData("default/defaultParameters.tsv")[[1]]
-                                     ),
-                                     selected = "DAR"
-                         ),
-                         selectInput(
-                           "zAxisItem", "Choose Z-axis:",
-                           list("Tumor size (waterfall plot)", "Sum of longest diameter (waterfall plot)"),
-                           "MED"
-                         )
-                       ),
-                       tabsetPanel(
-                         tabPanel(
-                           "Graph",
-                           plotlyOutput(outputId = "plot3d"),
-                           textOutput("figureCaption")
-                         ),
-                         tabPanel("Points", dataTableOutput("resultTable3D"))
-                       )
               )
             )
           )

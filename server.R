@@ -2,7 +2,7 @@
 server <- function(input, output, session) {
   
   #
-  # Input DT
+  ############### Input DT ----------------
   #
   
   options(DT.options = list(pageLength = 100, dom = "t"))
@@ -66,8 +66,10 @@ server <- function(input, output, session) {
     }
   })
   
-  # -----------------------------
-  # Preset feature from SIDEBAR
+  
+  #
+  #################### Preset feature from SIDEBAR ---------------------
+  # Parameter aus Databook
   
   UpdateDTTable <- function(name, newValue, isRed = FALSE) {
     if (name %in% conditionTable$Initial) {
@@ -181,11 +183,8 @@ server <- function(input, output, session) {
   )
   
   
-  # Preset feature end
-  # -----------------------------
-  
   #
-  # Save State to file feature
+  ############### Save State to file feature ----------------
   #
   
   output$download_button <- downloadHandler(
@@ -304,14 +303,13 @@ server <- function(input, output, session) {
     contentType = "application/zip"
   )
   
-  # Save State to file feature end
-  # -----------------------------
+  ########## Save State to file feature end
   
   # Panel tab loaded second tab first to put it also to memory, set it back to first tab here
   updateTabsetPanel(session, "inputTablePanel", selected = "Conditions")
   
   #
-  # Simulation
+  ############### Simulation feature ----------------
   #
   
   RunSim <- reactive({
@@ -338,39 +336,23 @@ server <- function(input, output, session) {
     })
   })
   
-  RunSimVar <- reactive({
-    input$update
-    isolate({
-      withProgress({
-        setProgress(message = "Calculating parameter variability...")
-        
-        results <- SimThisVar(input, conditionTable, parameterTable)
-        
-        results
-      })
-    })
-  })
-  
-  MatrixSim <- reactive({
-    input$update
-    isolate({
-      if (input$update != 0) {
-        withProgress({
-          setProgress(value = 0, message = "Calculating waterfall plot...")
-          validate(
-            need(
-              input$xAxisItem != input$yAxisItem,
-              "Same variables selected for both X- and Y-axis, please change one of them."
-            )
-          )
-          MatrixSimResults <- MultipleSim(input, conditionTable, parameterTable)
-        })
-      }
-    })
-  })
-  
+
   #
-  # Output
+  ############### Plots feature ----------------
+  #
+
+  output$plot1 <- renderPlotly({
+    show <- c("legendonly", rep(T, 5), rep("legendonly", 16))
+    MakePlot1(RunSim()$numericalSolution, show, "Plasma PK")
+  })
+  
+  output$plotExpData <- renderPlotly({
+    ExpPlot(RunSim()$numericalSolution, input, "Comparison of simulation with experimental data")
+  })
+  
+
+  #
+  ############### Text output ----------------
   #
   
   output$resultTable <- renderDataTable({
@@ -378,43 +360,6 @@ server <- function(input, output, session) {
     result <- result[ , !names(result) %in% c("Ab_C1_f", "Ab_C2_f", "EC50", "Ag_cell_t", "ADC_ex_f_E_ADC")]
     custom_formatted_results <- FormatSimRawDataForOutput(result)
     custom_formatted_results
-  })
-  
-  output$AUC <- renderPrint({
-    data <- RunSim()$numericalSolution
-    AUCdegADC <- auc(data$time, data$degADC)[1]
-    AUCdegADCperTime <- auc(data$time, data$degADCperTime)[1]
-    str1 <- paste("AUC of sum of degradated ADC in tumor =", AUCdegADC, "nmol*h")
-    str2 <- paste("AUC of degradated ADC in tumor =", AUCdegADCperTime, "nmol*h")
-    cat(paste(str1, str2, sep = "\n"))
-  })
-  
-  output$plot1 <- renderPlotly({
-    show <- c("legendonly", rep(T, 5), rep("legendonly", 16))
-    MakePlot1(RunSim()$numericalSolution, show, "Plasma PK")
-  })
-  
-  output$plot2 <- renderPlotly({
-    show <- c(rep("legendonly", 9), T, T, T, T, T, rep("legendonly", 8))
-    MakePlot1(RunSim()$numericalSolution, show, "Number of molecules in a single tumor cell")
-  })
-  
-  output$plot3 <- renderPlotly({
-    show <- c(rep("legendonly", 18), T, rep("legendonly", 3))
-    MakePlot1(RunSim()$numericalSolution, show, "Occupancy of drug target")
-  })
-  
-  output$plot4 <- renderPlotly({
-    show <- c(T, rep("legendonly", 13), rep(T, 4), rep("legendonly", 4))
-    MakePlot1(RunSim()$numericalSolution, show, "Tumor volume")
-  })
-  
-  output$plotExpData <- renderPlotly({
-    ExpPlot(RunSim()$numericalSolution, input, "Comparison of simulation with experimental data")
-  })
-  
-  output$plotVar<- renderPlotly({
-    VarPlot(RunSimVar(), input, "Parameter variability")
   })
   
   output$fittingResult <- renderPrint({
@@ -428,46 +373,5 @@ server <- function(input, output, session) {
     }
   })
   
-  output$plot3d <- renderPlotly({
-    validate(need(input$update != 0, "Press 'Calculate and plot' button first and progress bar should appear."))
-    validate(need(MatrixSim(), "Wait for the calculations to happen."))
-    
-    isolate({
-      withProgress({
-        setProgress(message = "Building waterfall plot ...")
-        MakeWaterfallPlot(input, MatrixSim())
-      })
-    })
-  })
-  
-  output$figureCaption <- renderText({
-    input$update
-    isolate({
-      if (input$zAxisItem == "Tumor size (waterfall plot)") {
-        validate(need(MatrixSim(), ""))
-        initialV_tumor <- sum(conditionTable[conditionTable$Initial %in% c("V_tumor_pro_mm3", "V_tumor_dyi_1_mm3", "V_tumor_dyi_2_mm3", "V_tumor_dyi_3_mm3"), "Value"])
-        paste(
-          "Figure 1. Waterfall plot that shows change in tumor volume (%) from initial", initialV_tumor,
-          "cubic millimeters after", input$maxTime, "days for different parameter combinations. Parameter X is",
-          input$xAxisItem, " (blue hue) and Y is", input$yAxisItem, "(asterisks)."
-        )
-      } else if (input$zAxisItem == "Sum of longest diameter (waterfall plot)") {
-        validate(need(MatrixSim(), ""))
-        initialV_tumor <- sum(conditionTable[conditionTable$Initial %in% c("V_tumor_pro_mm3", "V_tumor_dyi_1_mm3", "V_tumor_dyi_2_mm3", "V_tumor_dyi_3_mm3"), "Value"])
-        initialD <- (sign(initialV_tumor)*initialV_tumor * 6 / pi)^(1/3)
-        paste(
-          "Figure 1. Waterfall plot that shows change in sum of longest diameter (%) from initial", round(initialD, digits = 2),
-          "mm after", input$maxTime, "days for different parameter combinations. Parameter X is",
-          input$xAxisItem, " (blue hue) and Y is", input$yAxisItem, "(asterisks)."
-        )
-      }
-    })
-  })
-  
-  output$resultTable3D <- renderDataTable({
-    validate(need(MatrixSim(), "Wait for the calculations to happen."))
-    result <- MatrixSim()
-    custom_formatted_results <- FormatSimRawDataForOutput3D(input, result)
-    custom_formatted_results
-  })
+
 }

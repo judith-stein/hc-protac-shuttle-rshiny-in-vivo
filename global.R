@@ -17,8 +17,8 @@ library(DEoptim) # for global parameter fitting using DEoptim
 library(minpack.lm) # For least squares fit using levenberg-marquart algorithm
 library(ggplot2)
 library(rxode2)
+library(glue)
 
-source("Model.R")
 source("functions.R")
 
 # Make it possible to download source files
@@ -34,61 +34,27 @@ defaultExpDataAsString <- readChar(
 )
 
 
-SimThis <- function(input, conditions, parameters,
-                    paramXname = NULL, paramXvalue = NULL,
-                    paramYname = NULL, paramYvalue = NULL) {
-  
+#
+############### Simulation ----------------
+#
+
+SimThis <- function(input, conditions, parameters) {
+
   experimentalData <- LoadExpData(input$expDataAsString)
   
   initialConditions <- PickValuesToNumeric(conditions)
   initialParameters <- PickValuesToNumeric(parameters)
-  
-  initialParameters["thresholdV_tumor"] <- input$thresholdTumorVolume
-  initialParameters["enableTmdd"] <- input$enableTmdd
-  
-  initialConditions["degADC"] <- 0
-  initialConditions["A"] <- 0
-  initialConditions["D"] <- 0
-  initialConditions["Ab_C1_f"] <- initialConditions["Ab_C1_f"] * 0.001 / 150000 * 1e9 # convert from mg/kg to nmol/kg
-  
-  # Parameter variability
-  initialParameters["eta.EC50"] <- 0
-  initialParameters["eta.Ag_cell_t"] <- 0
-  
-  
-  # Switch waterfall plot variables in-place
-  if (!is.null(paramXname)) {
-    # For possible x-values:
-    initialParameters <- ReplaceIfThere(initialParameters, paramXname, paramXvalue)
-    initialConditions <- ReplaceIfThere(initialConditions, paramXname, paramXvalue)
-  }
-  if (!is.null(paramYname)) {
-  # For possible y-values:
-  initialParameters <- ReplaceIfThere(initialParameters, paramYname, paramYvalue)
-  initialConditions <- ReplaceIfThere(initialConditions, paramYname, paramYvalue)
-  }
-  
+  initialParameters["max"] <- input$max
   
   # EventTable as Input for RxODE: dosing and observation (sampling) events
   et <- eventTable(amount.units = "1", time.units = "hours")
   timeSteps <- seq(from = 0, to = input$maxTime * 24, by = 1/2) 
   et$add.sampling(timeSteps)
-  et$add.dosing(dosing.to = "ADC_C1_f",
-                dose = initialConditions["Dose"] * 0.001 / 150000 * 1e9,
+  et$add.dosing(dosing.to = "Ab_C1_f",
+                dose = initialConditions["Dose"] * 0.001 / initialParameters["MW_Ab"] * 1e9, # convert from mg/kg to nmol/kg
                 nbr.doses = input$doseMaxT + 1,
                 dosing.interval=input$doseT*24,
                 start.time = input$startT)
-  # Dosing for DAR
-  et$add.dosing(dosing.to = "D",
-                dose = initialConditions["Dose"] * 0.001 / 150000 * 1e9 * initialConditions["DAR"],
-                nbr.doses = input$doseMaxT + 1,
-                dosing.interval=input$doseT*24,
-                start.time = input$startT)
-  et$add.dosing(dosing.to = "A",
-                dose = initialConditions["Dose"] * 0.001 / 150000 * 1e9,
-                nbr.doses = input$doseMaxT + 1,
-                dosing.interval=input$doseT*24,
-                start.time = input$startT) 
   
   #################################### Fitting
   
@@ -153,21 +119,15 @@ SimThis <- function(input, conditions, parameters,
   
   #################################### Fitting end
   
+  # writeLines(BuildModelForN(max = input$max), "model.txt")
+  Model <<- rxode2(BuildModelForN(max = input$max))
+  
   # Solve equation with given parameters with RxODE
   numericalSolution <- as.data.frame(Model$solve(initialParameters,
                                                  et,
                                                  initialConditions)
   )
   
-  # Convert ADC_C1_f and ADC_C2_f from nmol/Kg to nM for plotting: (nmol/kg) / (L/kg) = nM
-  numericalSolution["ADC_C1_f_nM"] <- sapply(
-    numericalSolution["ADC_C1_f"],
-    function(x) x / initialParameters["V_C1_ADC"]
-  )
-  numericalSolution["ADC_C2_f_nM"] <- sapply(
-    numericalSolution["ADC_C2_f"],
-    function(x) x / initialParameters["V_C2_ADC"]
-  )
   # Convert Ab_C1_f and Ab_C2_f from nmol/Kg to nM for plotting: (nmol/kg) / (L/kg) = nM
   numericalSolution["Ab_C1_f_nM"] <- sapply(
     numericalSolution["Ab_C1_f"],
@@ -178,223 +138,32 @@ SimThis <- function(input, conditions, parameters,
     function(x) x / initialParameters["V_C2_Ab"]
   )
   
-  # Intracellular occupancy of drug target
-  SF <- 10^9 / (6.023 * 10^23)
-  Drug_Target_cell_cyto_t_num <- initialParameters[["Drug_Target_cell_cyto_t"]] * initialParameters[["V_cell"]] / SF
-  numericalSolution["Occupancy"] <- numericalSolution["Drug_cell_cyto_b_dt"] / Drug_Target_cell_cyto_t_num * 100
   
-  numericalSolution["degADCperTime"] <- c()
-  numericalSolution$degADCperTime[1] <- numericalSolution$degADC[1]
-  if (length(numericalSolution$degADC) > 1) {
-    for (i in 2:length(numericalSolution$degADC)) {
-      numericalSolution$degADCperTime[i] <- numericalSolution$degADC[i] - numericalSolution$degADC[i-1]}
-  }
-  numericalSolution["ADC_in_tumor"] <- numericalSolution$ADC_ex_f / initialParameters[["E_ADC"]] * numericalSolution$V_tumor_mm3 * 10^-6 +                      
-    numericalSolution$ADC_cell_b_ag * initialParameters[["NCL_tumor"]] * numericalSolution$V_tumor_mm3 * 10^-6 * SF +
-    numericalSolution$ADC_cell_lyso_f * initialParameters[["NCL_tumor"]] * numericalSolution$V_tumor_mm3 * 10^-6 * SF +
-    numericalSolution["degADCperTime"]
-  
-  numericalSolution["ADC_ex_f_E_ADC"] <- numericalSolution$ADC_ex_f / initialParameters[["E_ADC"]]
-  
-  # waterfall plot
-  dataAtGoal <- numericalSolution[numericalSolution$time == input$maxTime * 24, ]
-  comparableV_tumor <- as.numeric(dataAtGoal["V_tumor_pro_mm3"] +
-                                    dataAtGoal["V_tumor_dyi_1_mm3"] +
-                                    dataAtGoal["V_tumor_dyi_2_mm3"] +
-                                    dataAtGoal["V_tumor_dyi_3_mm3"])
-  comparableD <- (sign(comparableV_tumor)*comparableV_tumor * 6 / pi)^(1/3)
-  
-  originalV_tumor <- as.numeric(initialConditions["V_tumor_pro_mm3"] +
-                                  initialConditions["V_tumor_dyi_1_mm3"] +
-                                  initialConditions["V_tumor_dyi_2_mm3"] +
-                                  initialConditions["V_tumor_dyi_3_mm3"])
-  originalD <- (sign(originalV_tumor)*originalV_tumor * 6 / pi)^(1/3)
-  
-  percentageChangeInTumorVolume <- (comparableV_tumor - originalV_tumor) / originalV_tumor * 100
-  percentageChangeInDiameter <- (comparableD - originalD) / originalD * 100
-
-  
-  return(list(numericalSolution = numericalSolution, fittingResults = fitval,
-              V_tumor = percentageChangeInTumorVolume, diameter = percentageChangeInDiameter))
+  return(list(numericalSolution = numericalSolution, fittingResults = fitval))
 }
 
-
-SimThisVar <- function(input, conditions, parameters) {
-  
-  initialConditions <- PickValuesToNumeric(conditions)
-  initialParameters <- PickValuesToNumeric(parameters)
-  
-  initialParameters["thresholdV_tumor"] <- input$thresholdTumorVolume
-  initialParameters["enableTmdd"] <- input$enableTmdd
-  
-  initialConditions["A"] <- 0
-  initialConditions["D"] <- 0
-  initialConditions["Ab_C1_f"] <- initialConditions["Ab_C1_f"] * 0.001 / 150000 * 1e9 # convert from mg/kg to nmol/kg
-  
-  # Parameter variability
-  std.EC50 <- input$std.EC50
-  std.Ag_cell_t <- input$std.Ag_cell_t
-  omega <- lotri(eta.EC50 ~ std.EC50^2,
-                 eta.Ag_cell_t ~ std.Ag_cell_t^2
-  )
-  
-  # EventTable as Input for RxODE: dosing and observation (sampling) events
-  et <- eventTable(amount.units = "1", time.units = "hours")
-  timeSteps <- seq(from = 0, to = input$maxTime * 24, by = 1/2) 
-  et$add.sampling(timeSteps)
-  et$add.dosing(dosing.to = "ADC_C1_f",
-                dose = initialConditions["Dose"] * 0.001 / 150000 * 1e9,
-                nbr.doses = input$doseMaxT + 1,
-                dosing.interval=input$doseT*24,
-                start.time = input$startT)
-  # Dosing for DAR
-  et$add.dosing(dosing.to = "D",
-                dose = initialConditions["Dose"] * 0.001 / 150000 * 1e9 * initialConditions["DAR"],
-                nbr.doses = input$doseMaxT + 1,
-                dosing.interval=input$doseT*24,
-                start.time = input$startT)
-  et$add.dosing(dosing.to = "A",
-                dose = initialConditions["Dose"] * 0.001 / 150000 * 1e9,
-                nbr.doses = input$doseMaxT + 1,
-                dosing.interval=input$doseT*24,
-                start.time = input$startT) 
-  
-  # Solve equation with given parameters with RxODE
-  numericalSolution <- rxSolve(Model,
-                               initialParameters,
-                               et,
-                               initialConditions,
-                               omega = omega,
-                               nSub = input$nSub
-  )
-  
-  return(numericalSolution = numericalSolution)
-}
-
-MultipleSim <- function(input, conditionTable, parameterTable) {
-  xn <- ReadStepsFromJson(input$xAxisInstructions)
-  yn <- ReadStepsFromJson(input$yAxisInstructions)
-  
-  x <- ReadRangeFromJson(input$xAxisInstructions)
-  y <- ReadRangeFromJson(input$yAxisInstructions)
-  
-  # Initialize result matrix that will be z-axis
-  # Prepare for three surfaces, even though we use only one at first
-  matrixTumorSize <- matrix(data = NA, nrow = yn, ncol = xn)
-  matrixDiameter <- matrix(data = NA, nrow = yn, ncol = xn)
-  
-  # Initialize messages for progress bar shown when calculations run
-  previousResult <- ""
-  progressCounter <- 0
-  maxProg <- 1
-  stepProg <- ""
-  
-  for (i in 1:yn) {
-    for (j in 1:xn) {
-      
-      if (input$zAxisItem == "Tumor size (waterfall plot)") {
-        # Tumor volume after x days with these variables
-        
-        # Update progress bar in the UI to show how many data points to be calculated
-        progressCounter <- progressCounter + 1
-        nowCalculating <- paste0(
-          "Now calculating V_tumor % with x: ", x[j], " and y: ", y[i],
-          " ... (", progressCounter, stepProg, "/", xn * yn, ")"
-        )
-        incProgress(amount = 1 / (xn * yn * maxProg + 1), message = paste(previousResult, nowCalculating))
-        
-        tv_after_x <- SimThis(input, conditionTable, parameterTable,
-                              paramXname = input$xAxisItem,
-                              paramXvalue = x[j],
-                              paramYname = input$yAxisItem,
-                              paramYvalue = y[i]
-        )$V_tumor
-        if (!is.null(tv_after_x)) {
-          matrixTumorSize[i, j] <- tv_after_x
-        } else {
-          matrixTumorSize[i, j] <- NA
-        }
-        
-        previousResult <- paste("Previously, V_tumor % was", round(tv_after_x), "(when x:", x[j], "and y:", y[i], ").")
-      }
-      
-      if (input$zAxisItem == "Sum of longest diameter (waterfall plot)") {
-        # Longest diameter after x days with these variables
-        
-        # Update progress bar in the UI to show how many data points to be calculated
-        progressCounter <- progressCounter + 1
-        nowCalculating <- paste0(
-          "Now calculating diameter % with x: ", x[j], " and y: ", y[i],
-          " ... (", progressCounter, stepProg, "/", xn * yn, ")"
-        )
-        incProgress(amount = 1 / (xn * yn * maxProg + 1), message = paste(previousResult, nowCalculating))
-        
-        d_after_x <- SimThis(input, conditionTable, parameterTable,
-                             paramXname = input$xAxisItem,
-                             paramXvalue = x[j],
-                             paramYname = input$yAxisItem,
-                             paramYvalue = y[i]
-        )$diameter
-        if (!is.null(d_after_x)) {
-          matrixDiameter[i, j] <- d_after_x
-        } else {
-          matrixDiameter[i, j] <- NA
-        }
-        
-        previousResult <- paste("Previously, diameter % was", round(d_after_x), "(when x:", x[j], "and y:", y[i], ").")
-      }
-      
-    }
-  }
-  
-  return(list(
-    "x" = x, "y" = y,
-    "Tumor size (waterfall plot)" = matrixTumorSize,
-    "Sum of longest diameter (waterfall plot)" = matrixDiameter
-  ))
-}
-
-
+#
+#################### Plots ---------------------
+#
 
 MakePlot1 <- function(simData, vis, title) {
   mfigure <- plot_ly(simData, x = ~ time / 24, y = ~V_tumor_mm3, name = "V_tumor (mm^3)", type = "scatter", mode = "lines", visible = vis[1]) %>%
-    add_trace(y = ~ADC_C1_f_nM, name = "ADC_C1_f (nM)", mode = "lines", visible = vis[2]) %>%
-    add_trace(y = ~ADC_C2_f_nM, name = "ADC_C2_f (nM)", mode = "lines", visible = vis[3]) %>%
+    add_trace(y = ~Ab_C1_f_nM, name = "Ab_C1_f (nM)", mode = "lines", visible = vis[2]) %>%
+    add_trace(y = ~Ab_C2_f_nM, name = "Ab_C2_f (nM)", mode = "lines", visible = vis[3]) %>%
     add_trace(y = ~Drug_C1_f, name = "Drug_C1_f (nM)", mode = "lines", visible = vis[4]) %>%
     add_trace(y = ~Drug_C2_f, name = "Drug_C2_f (nM)", mode = "lines", visible = vis[5]) %>%
     add_trace(y = ~Drug_C1_b_ntp, name = "Drug_C1_b_ntp (nM)", mode = "lines", visible = vis[6]) %>%
-    add_trace(y = ~DAR, name = "DAR", mode = "lines", visible = vis[7]) %>%
-    add_trace(y = ~ADC_ex_f, name = "ADC_ex_f (nM)", mode = "lines", visible = vis[8]) %>%
-    add_trace(y = ~ADC_ex_f_E_ADC, name = "ADC_ex_f/E_ADC (nM)", mode = "lines", visible = "legendonly") %>%
+    add_trace(y = ~Ab_ex_f, name = "ADC_ex_f (nM)", mode = "lines", visible = vis[8]) %>%
     add_trace(y = ~Drug_ex_f, name = "Drug_ex_f (nmol)", mode = "lines", visible = vis[9]) %>%
-    add_trace(y = ~ADC_cell_b_ag, name = "ADC_cell_b_ag", mode = "lines", visible = vis[10]) %>%
-    add_trace(y = ~ADC_cell_lyso_f, name = "ADC_cell_lyso_f", mode = "lines", visible = vis[11]) %>%
+    add_trace(y = ~Ab_cell_f_b_ag, name = "ADC_cell_b_ag", mode = "lines", visible = vis[10]) %>%
+    add_trace(y = ~Ab_cell_lyso_b1, name = "ADC_cell_lyso_b1", mode = "lines", visible = vis[11]) %>%
     add_trace(y = ~Drug_cell_lyso_f, name = "Drug_cell_lyso_f", mode = "lines", visible = vis[12]) %>%
     add_trace(y = ~Drug_cell_cyto_f, name = "Drug_cell_cyto_f", mode = "lines", visible = vis[13]) %>%
     add_trace(y = ~Drug_cell_cyto_b_dt, name = "Drug_cell_cyto_b_dt", mode = "lines", visible = vis[14]) %>%
-    add_trace(y = ~ADC_TMDD_cell_b_ag, name = "ADC_TMDD_cell_b_ag", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~ADC_TMDD_cell_lyso_f, name = "ADC_TMDD_cell_lyso_f", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Drug_TMDD_cell_lyso_f, name = "Drug_TMDD_cell_lyso_f", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Drug_TMDD_cell_cyto_f, name = "Drug_TMDD_cell_cyto_f", mode = "lines", visible = "legendonly") %>%
     add_trace(y = ~V_tumor_pro_mm3, name = "V_tumor_pro_mm3", mode = "lines", visible = vis[15]) %>%
     add_trace(y = ~V_tumor_dyi_1_mm3, name = "V_tumor_dyi_1_mm3", mode = "lines", visible = vis[16]) %>%
     add_trace(y = ~V_tumor_dyi_2_mm3, name = "V_tumor_dyi_2_mm3", mode = "lines", visible = vis[17]) %>%
     add_trace(y = ~V_tumor_dyi_3_mm3, name = "V_tumor_dyi_3_mm3", mode = "lines", visible = vis[18]) %>%
-    add_trace(y = ~Occupancy, name = "Target_occup.", mode = "lines", visible = vis[19]) %>%
-    add_trace(y = ~degADC, name = "Sum of deg. ADC (nmol)", mode = "lines", visible = vis[20]) %>%
-    add_trace(y = ~degADCperTime, name = "Deg. ADC (nmol)", mode = "lines", visible = vis[21]) %>%
-    add_trace(y = ~ADC_in_tumor, name = "ADC in tumor (nmol)", mode = "lines", visible = vis[22]) %>%
-    add_trace(y = ~Ab_C1_f, name = "Ab_C1_f (nmol/kg)", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Ab_C2_f, name = "Ab_C2_f (nmol/kg)", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Ab_C1_f_nM, name = "Ab_C1_f (nM)", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Ab_C2_f_nM, name = "Ab_C2_f (nM)", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Ab_ex_f, name = "Ab_ex_f (nM)", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Ab_cell_b_ag, name = "Ab_cell_b_ag", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Ab_TMDD_cell_b_ag, name = "Ab_TMDD_cell_b_ag", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Ag_C1_f, name = "Ag_C1_f (nmol/kg)", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Ag_C1_b, name = "Ag_C1_b (nmol/kg)", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Ag_ex_f, name = "Ag_ex_f (nM)", mode = "lines", visible = "legendonly") %>%
-    add_trace(y = ~Ag_ex_b, name = "Ag_ex_b (nM)", mode = "lines", visible = "legendonly") %>%
     layout(
       margin = list(t = 50), title = title,
       xaxis = list(title = "Time (days)"),
@@ -639,6 +408,10 @@ MakeWaterfallPlot <- function(input, xyzData) {
   return(plotWaterfall)
 }
 
+
+#
+#################### Databook feature ---------------------
+#
 
 # Databook feature
 tx <- xlsx_cells(databookFileName)
