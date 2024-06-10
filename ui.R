@@ -78,6 +78,16 @@ ui <- shinyUI(dashboardPage(
                           <a href=\"logistic_pk_pd_equations_explained.pdf\" target=\"_blank\">PDF</a><br>")
           ),
           numericInput("maxTime", "Max t (days)", value = 52),
+          selectInput("doseTo", "Dose of which PROxAb:",
+                      list(
+                        "Ab_C1_f", "Ab_C1_b1", "Ab_C1_b2", "Ab_C1_b3", "Ab_C1_b4"
+                      ),
+                      selected = "Ab_C1_b1"
+          ),
+          "bx <= max. number of bound protacs per antibody",
+          numericInput("dose", "Dose (mg/kg)", value = 2),
+          numericInput("doseDrug", "Additional dose of free Protac Drug_C1_f (mg/kg)", value = 0),
+          "Dose converted to nmol/kg or nM with corresponding MW. Same dosing scheme for free Protac and Shuttle.", br(),
           numericInput("doseT", "Dose given every x day", value = 0),
           numericInput("doseMaxT", "For a total number of times of (1 + x)", value = 0),
           numericInput("startT", "Dosing start time (h)", value = 0), 

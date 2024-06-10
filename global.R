@@ -18,6 +18,7 @@ library(minpack.lm) # For least squares fit using levenberg-marquart algorithm
 library(ggplot2)
 library(rxode2)
 library(glue)
+library(readr)
 
 source("functions.R")
 
@@ -50,8 +51,13 @@ SimThis <- function(input, conditions, parameters) {
   et <- eventTable(amount.units = "1", time.units = "hours")
   timeSteps <- seq(from = 0, to = input$maxTime * 24, by = 1/2) 
   et$add.sampling(timeSteps)
-  et$add.dosing(dosing.to = "Ab_C1_f",
-                dose = initialConditions["Dose"] * 0.001 / initialParameters["MW_Ab"] * 1e9, # convert from mg/kg to nmol/kg
+  et$add.dosing(dosing.to = input$doseTo,
+                dose = input$dose * 0.001 / initialParameters["MW_Ab"] * 1e9, # convert from mg/kg to nmol/kg
+                nbr.doses = input$doseMaxT + 1,
+                dosing.interval=input$doseT*24,
+                start.time = input$startT)
+  et$add.dosing(dosing.to = "Drug_C1_f",
+                dose = input$doseDrug * 1e6 / initialParameters["MW_Drug"] / initialParameters["V_C1_Drug"], # From mg/kg to nmol/L
                 nbr.doses = input$doseMaxT + 1,
                 dosing.interval=input$doseT*24,
                 start.time = input$startT)
