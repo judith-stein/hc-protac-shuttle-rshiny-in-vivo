@@ -105,7 +105,7 @@ FormatSimRawDataForOutput <- function(raw) {
   formatted[-c(1, 2)] <- format(formatted[-c(1, 2)], scientific = TRUE)
   # Only whole days
   filtered <- formatted[unlist(lapply(formatted["time_d"], IsNaturalOrZero)), ]
-  filtered <- SetColumnNameswithUnits(filtered)
+  # filtered <- SetColumnNameswithUnits(filtered)
   return(filtered)
 }
 
@@ -378,15 +378,23 @@ ReplaceIfThere <- function(namedList, name, newValue) {
 BuildModelForN <- function(max = 1) {
   
   Ab_C1_b1KD <- ifelse(max >= 2, 
-                     paste0("- K_Ab_Drug_on * (max - 1) * Ab_C1_b1 * Drug_C1_f + K_Ab_Drug_off * Ab_C1_b2"), 
+                     paste0("- K_Ab_Drug_on * (max - 1) * Ab_C1_b1 * Drug_C1_f + K_Ab_Drug_off * Ab_C1_b2
+                              - K_Ab_Meta_on * (max - 1) * Ab_C1_b1 * Meta1_C1_f
+                              + K_Ab_Meta_off * Ab_C1_b1_m1"), 
                       paste0(""))
   
   Ab_C2_b1KD <- ifelse(max >= 2, 
                        paste0("- K_Ab_Drug_on * (max - 1) * Ab_C2_b1 * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b2"), 
                        paste0(""))
   
+  Ab_C2_m1KD <- ifelse(max >= 2, 
+                       paste0("- K_Ab_Drug_on * (max - 1) * Ab_C2_m1 * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b1_m1"), 
+                       paste0(""))
+  
   Ab_C1_b2KD <- ifelse(max > 2, 
                        paste0("- K_Ab_Drug_on * (max - 2) * Ab_C1_b2 * Drug_C1_f + K_Ab_Drug_off * Ab_C1_b3
+                                - K_Ab_Meta_on * (max - 2) * Ab_C1_b2 * Meta1_C1_f
+                                + K_Ab_Meta_off * Ab_C1_b2_m1
                               "), 
                        paste0(""))
   Ab_C1_b2 <- ifelse(max >= 2, 
@@ -397,12 +405,13 @@ d/dt(Ab_C1_b2) <- - (CL_Ab / V_C1_Ab) * Ab_C1_b2
                   - (Ab_C1_b2 / V_C1_Ab - Ab_ex_b2 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
                   + K_Ab_Drug_on * (max - 1) * Ab_C1_b1 * Drug_C1_f
                   - K_Ab_Drug_off * Ab_C1_b2
-                  ", Ab_C1_b2KD
-), 
+                  ", Ab_C1_b2KD), 
                      paste0(""))
 
   Ab_C1_b3KD <- ifelse(max > 3, 
                        paste0(" - K_Ab_Drug_on * (max - 3) * Ab_C1_b3 * Drug_C1_f + K_Ab_Drug_off * Ab_C1_b4
+                                - K_Ab_Meta_on * (max - 3) * Ab_C1_b3 * Meta1_C1_f
+                                + K_Ab_Meta_off * Ab_C1_b3_m1
                               "), 
                        paste0(""))
   Ab_C1_b3 <- ifelse(max >= 3, 
@@ -413,9 +422,162 @@ d/dt(Ab_C1_b3) <- - (CL_Ab / V_C1_Ab) * Ab_C1_b3
                   - (Ab_C1_b3 / V_C1_Ab - Ab_ex_b3 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
                   + K_Ab_Drug_on * (max - 2) * Ab_C1_b2 * Drug_C1_f
                   - K_Ab_Drug_off * Ab_C1_b3
-                  ", Ab_C1_b3KD
-), 
+                  ", Ab_C1_b3KD), 
                      paste0(""))
+  
+  Ab_C1_m1KD <- ifelse(max > 1, 
+                       paste0(" - K_Ab_Drug_on * (max - 1) * Ab_C1_m1 * Drug_C1_f
+                                + K_Ab_Drug_off * Ab_C1_b1_m1
+                                - K_Ab_Meta_on * (max - 1) * Ab_C1_m1 * Meta1_C1_f
+                                + K_Ab_Meta_off * Ab_C1_m2
+                              "), 
+                       paste0(""))
+
+  Ab_C1_m2KD <- ifelse(max > 2, 
+                       paste0(" - K_Ab_Drug_on * (max - 2) * Ab_C1_m2 * Drug_C1_f
+                                + K_Ab_Drug_off * Ab_C1_b1_m2
+                                - K_Ab_Meta_on * (max - 2) * Ab_C1_m2 * Meta1_C1_f
+                                + K_Ab_Meta_off * Ab_C1_m3
+                              "), 
+                       paste0(""))
+  Ab_C1_m2 <- ifelse(max >= 2, 
+                     paste0("# Amount (nmol/kg) of Antibody bound to 2 Metabolites1 in central compartment/plasma
+d/dt(Ab_C1_m2) <- - (CL_Ab / V_C1_Ab) * Ab_C1_m2
+                  - (CLD_Ab / V_C1_Ab) * Ab_C1_m2
+                  + (CLD_Ab / V_C2_Ab) * Ab_C2_m2
+                  - (Ab_C1_m2 / V_C1_Ab - Ab_ex_m2 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                  + K_Ab_Meta_on * (max - 1) * Ab_C1_m1 * Meta1_C1_f
+                  - K_Ab_Meta_off * Ab_C1_m2
+                  ", Ab_C1_m2KD), 
+                  paste0(""))
+  
+  Ab_C1_m3KD <- ifelse(max > 3, 
+                       paste0(" - K_Ab_Drug_on * (max - 3) * Ab_C1_m3 * Drug_C1_f
+                                + K_Ab_Drug_off * Ab_C1_b1_m3
+                                - K_Ab_Meta_on * (max - 3) * Ab_C1_m3 * Meta1_C1_f
+                                + K_Ab_Meta_off * Ab_C1_m4
+                              "), 
+                       paste0(""))
+  Ab_C1_m3 <- ifelse(max >= 3, 
+                     paste0("# Amount (nmol/kg) of Antibody bound to 3 Metabolites1 in central compartment/plasma
+d/dt(Ab_C1_m3) <- - (CL_Ab / V_C1_Ab) * Ab_C1_m3
+                  - (CLD_Ab / V_C1_Ab) * Ab_C1_m3
+                  + (CLD_Ab / V_C2_Ab) * Ab_C2_m3
+                  - (Ab_C1_m3 / V_C1_Ab - Ab_ex_m3 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                  + K_Ab_Meta_on * (max - 2) * Ab_C1_m2 * Meta1_C1_f
+                  - K_Ab_Meta_off * Ab_C1_m3
+                  ", Ab_C1_m3KD), 
+                  paste0(""))
+  
+  Ab_C1_m4 <- ifelse(max >= 4, 
+                     paste0("# Amount (nmol/kg) of Antibody bound to 4 Metabolites1 in central compartment/plasma
+d/dt(Ab_C1_m4) <- - (CL_Ab / V_C1_Ab) * Ab_C1_m4
+                  - (CLD_Ab / V_C1_Ab) * Ab_C1_m4
+                  + (CLD_Ab / V_C2_Ab) * Ab_C2_m4
+                  - (Ab_C1_m4 / V_C1_Ab - Ab_ex_m4 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                  + K_Ab_Meta_on * Ab_C1_m3 * Meta1_C1_f
+                  - K_Ab_Meta_off * Ab_C1_m4
+                  "), 
+                  paste0(""))
+  
+  Ab_C1_b1_m1KD <- ifelse(max > 2, 
+                       paste0(" - K_Ab_Drug_on * (max - 2) * Ab_C1_b1_m1 * Drug_C1_f
+                                + K_Ab_Drug_off * Ab_C1_b2_m1
+                                - K_Ab_Meta_on * (max - 2) * Ab_C1_b1_m1 * Meta1_C1_f
+                                + K_Ab_Meta_off * Ab_C1_b1_m2
+                              "), 
+                       paste0(""))
+  Ab_C1_b1_m1 <- ifelse(max >= 2, 
+                     paste0("# Amount (nmol/kg) of Antibody bound to 1 Protac and 1 Metabolite1 in central compartment/plasma
+d/dt(Ab_C1_b1_m1) <- - (CL_Ab / V_C1_Ab) * Ab_C1_b1_m1
+                      - (CLD_Ab / V_C1_Ab) * Ab_C1_b1_m1
+                      + (CLD_Ab / V_C2_Ab) * Ab_C2_b1_m1
+                      - (Ab_C1_b1_m1 / V_C1_Ab - Ab_ex_b1_m1 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                      + K_Ab_Meta_on * (max - 1) * Ab_C1_b1 * Meta1_C1_f
+                      - K_Ab_Meta_off * Ab_C1_b1_m1
+                      + K_Ab_Drug_on * (max - 1) * Ab_C1_m1 * Drug_C1_f
+                      - K_Ab_Drug_off * Ab_C1_b1_m1
+                      ", Ab_C1_b1_m1KD), 
+                  paste0(""))
+  
+  Ab_C1_b1_m2KD <- ifelse(max > 3, 
+                          paste0(" - K_Ab_Drug_on * (max - 3) * Ab_C1_b1_m2 * Drug_C1_f
+                                  + K_Ab_Drug_off * Ab_C1_b2_m2
+                                  - K_Ab_Meta_on * (max - 3) * Ab_C1_b1_m2 * Meta1_C1_f
+                                  + K_Ab_Meta_off * Ab_C1_b1_m3
+                              "), 
+                          paste0(""))
+  Ab_C1_b1_m2 <- ifelse(max >= 3, 
+                        paste0("# Amount (nmol/kg) of Antibody bound to 1 Protac and 2 Metabolites1 in central compartment/plasma
+d/dt(Ab_C1_b1_m2) <- - (CL_Ab / V_C1_Ab) * Ab_C1_b1_m2
+                    - (CLD_Ab / V_C1_Ab) * Ab_C1_b1_m2
+                    + (CLD_Ab / V_C2_Ab) * Ab_C2_b1_m2
+                    - (Ab_C1_b1_m2 / V_C1_Ab - Ab_ex_b1_m2 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                    + K_Ab_Meta_on * (max - 2) * Ab_C1_b1_m1 * Meta1_C1_f
+                    - K_Ab_Meta_off * Ab_C1_b1_m2
+                    + K_Ab_Drug_on * (max - 2) * Ab_C1_m2 * Drug_C1_f
+                    - K_Ab_Drug_off * Ab_C1_b1_m2
+                    ", Ab_C1_b1_m2KD), 
+                  paste0(""))
+  
+  Ab_C1_b2_m1KD <- ifelse(max > 3, 
+                          paste0(" - K_Ab_Drug_on * (max - 3) * Ab_C1_b2_m1 * Drug_C1_f
+                                  + K_Ab_Drug_off * Ab_C1_b3_m1
+                                  - K_Ab_Meta_on * (max - 3) * Ab_C1_b2_m1 * Meta1_C1_f
+                                  + K_Ab_Meta_off * Ab_C1_b2_m2
+                              "), 
+                          paste0(""))
+  Ab_C1_b2_m1 <- ifelse(max >= 3, 
+                        paste0("# Amount (nmol/kg) of Antibody bound to 2 Protacs and 1 Metabolite1 in central compartment/plasma
+d/dt(Ab_C1_b2_m1) <- - (CL_Ab / V_C1_Ab) * Ab_C1_b2_m1
+                      - (CLD_Ab / V_C1_Ab) * Ab_C1_b2_m1
+                      + (CLD_Ab / V_C2_Ab) * Ab_C2_b2_m1
+                      - (Ab_C1_b2_m1 / V_C1_Ab - Ab_ex_b2_m1 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                      + K_Ab_Meta_on * (max - 2) * Ab_C1_b2 * Meta1_C1_f
+                      - K_Ab_Meta_off * Ab_C1_b2_m1
+                      + K_Ab_Drug_on * (max - 2) * Ab_C1_b1_m1 * Drug_C1_f
+                      - K_Ab_Drug_off * Ab_C1_b2_m1
+                      ", Ab_C1_b2_m1KD), 
+                  paste0(""))
+  
+  Ab_C1_b1_m3 <- ifelse(max == 4, 
+                        paste0("# Amount (nmol/kg) of Antibody bound to 1 Protac and 3 Metabolites1 in central compartment/plasma
+d/dt(Ab_C1_b1_m3) <- - (CL_Ab / V_C1_Ab) * Ab_C1_b1_m3
+                      - (CLD_Ab / V_C1_Ab) * Ab_C1_b1_m3
+                      + (CLD_Ab / V_C2_Ab) * Ab_C2_b1_m3
+                      - (Ab_C1_b1_m3 / V_C1_Ab - Ab_ex_b1_m3 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                      + K_Ab_Meta_on * (max - 3) * Ab_C1_b1_m2 * Meta1_C1_f
+                      - K_Ab_Meta_off * Ab_C1_b1_m3
+                      + K_Ab_Drug_on * (max - 3) * Ab_C1_m3 * Drug_C1_f
+                      - K_Ab_Drug_off * Ab_C1_b1_m3
+                      "), 
+                      paste0(""))
+  
+  Ab_C1_b2_m2 <- ifelse(max == 4, 
+                        paste0("# Amount (nmol/kg) of Antibody bound to 2 Protacs and 2 Metabolites1 in central compartment/plasma
+d/dt(Ab_C1_b2_m2) <- - (CL_Ab / V_C1_Ab) * Ab_C1_b2_m2
+                      - (CLD_Ab / V_C1_Ab) * Ab_C1_b2_m2
+                      + (CLD_Ab / V_C2_Ab) * Ab_C2_b2_m2
+                      - (Ab_C1_b2_m2 / V_C1_Ab - Ab_ex_b2_m2 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                      + K_Ab_Meta_on * (max - 3) * Ab_C1_b2_m1 * Meta1_C1_f
+                      - K_Ab_Meta_off * Ab_C1_b2_m2
+                      + K_Ab_Drug_on * (max - 3) * Ab_C1_b1_m2 * Drug_C1_f
+                      - K_Ab_Drug_off * Ab_C1_b2_m2
+                      "), 
+                      paste0(""))
+  
+  Ab_C1_b3_m1 <- ifelse(max == 4, 
+                        paste0("# Amount (nmol/kg) of Antibody bound to 3 Protacs and 1 Metabolite1 in central compartment/plasma
+d/dt(Ab_C1_b3_m1) <- - (CL_Ab / V_C1_Ab) * Ab_C1_b3_m1
+                      - (CLD_Ab / V_C1_Ab) * Ab_C1_b3_m1
+                      + (CLD_Ab / V_C2_Ab) * Ab_C2_b3_m1
+                      - (Ab_C1_b3_m1 / V_C1_Ab - Ab_ex_b3_m1 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                      + K_Ab_Meta_on * (max - 3) * Ab_C1_b3 * Meta1_C1_f
+                      - K_Ab_Meta_off * Ab_C1_b3_m1
+                      + K_Ab_Drug_on * (max - 3) * Ab_C1_b2_m1 * Drug_C1_f
+                      - K_Ab_Drug_off * Ab_C1_b3_m1
+                      "), 
+                      paste0(""))
   
   Ab_C2_b2KD <- ifelse(max > 2, 
                        paste0(" - K_Ab_Drug_on * (max - 2) * Ab_C2_b2 * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b3
@@ -463,27 +625,166 @@ d/dt(Ab_C2_b4) <- (CLD_Ab / V_C1_Ab) * Ab_C1_b4
                   - K_Ab_Drug_off * Ab_C2_b4"), 
                      paste0(""))
   
+  Drug_C1_b <- ifelse(max >= 1, 
+                           paste0("Ab_C1_b", 1:max, " * ", 1:max, collapse=" + "), 
+                           paste0("0"))
+  Drug_C1_combi1 <- ifelse(max >= 2, 
+                           paste0("Ab_C1_b1_m", 1:(max-1), collapse=" + "), 
+                           paste0("0"))
+  Drug_C1_combi2 <- ifelse(max >= 3, 
+                           paste0("Ab_C1_b2_m", 1:(max-2), collapse=" + "), 
+                           paste0("0"))
+  Drug_C1_combi3 <- ifelse(max == 4, 
+                           paste0(" Ab_C1_b3_m1"), 
+                           paste0("0"))
+  
   Drug_C1_f <- ifelse(max >= 1, 
-                       paste0("CL_Ab * ", 1:max," * (Ab_C1_b", 1:max," / V_C1_Ab) / V_C1_Drug", collapse=" + "), 
+                       paste0("(CL_Ab * ((", Drug_C1_b,") + (", Drug_C1_combi1, ") + (", Drug_C1_combi2, ") * 2 + ", Drug_C1_combi3, " * 3) / V_C1_Ab) / V_C1_Drug"), 
                        paste0(""))
   
+  Drug_C1_m <- ifelse(max >= 1, 
+                      paste0("Ab_C1_m", 1:max, " * ", 1:max, collapse=" + "), 
+                      paste0("0"))
+  Meta1_C1_f_combi1 <- ifelse(max >= 2, 
+                                    paste0("Ab_C1_b1_m", 1:(max-1), " * ", 1:(max-1), collapse=" + "), 
+                                    paste0("0"))
+  Meta1_C1_f_combi2 <- ifelse(max >= 3, 
+                                    paste0("Ab_C1_b2_m", 1:(max-2), " * ", 1:(max-2), collapse=" + "), 
+                                    paste0("0"))
+  
+  Meta1_C1_f <- ifelse(max >= 1, 
+                      paste0("(CL_Ab * ((", Drug_C1_m,") + (", Meta1_C1_f_combi1, ") + (", Meta1_C1_f_combi2, ") + ", Drug_C1_combi3, ") / V_C1_Ab) / V_C1_Meta"), 
+                      paste0(""))
+  
+  Ab_C2_m2KD <- ifelse(max > 2, 
+                       paste0(" - K_Ab_Drug_on * (max - 2) * Ab_C2_m2 * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b1_m2
+                              "), 
+                       paste0(""))
+  Ab_C2_m2 <- ifelse(max >= 2, 
+                     paste0("# Amount (nmol/kg) of Antibody bound to 2 Metabolites1 in peripheral compartment
+d/dt(Ab_C2_m2) <- (CLD_Ab / V_C1_Ab) * Ab_C1_m2 
+                  - (CLD_Ab / V_C2_Ab) * Ab_C2_m2 
+                  ", Ab_C2_m2KD
+                     ), 
+                  paste0(""))
+  
+  Ab_C2_m3KD <- ifelse(max > 3, 
+                       paste0(" - K_Ab_Drug_on * (max - 3) * Ab_C2_m3 * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b1_m3
+                              "), 
+                       paste0(""))
+  Ab_C2_m3 <- ifelse(max >= 3, 
+                     paste0("# Amount (nmol/kg) of Antibody bound to 3 Metabolites1 in peripheral compartment
+d/dt(Ab_C2_m3) <- (CLD_Ab / V_C1_Ab) * Ab_C1_m3 
+                  - (CLD_Ab / V_C2_Ab) * Ab_C2_m3 
+                  ", Ab_C2_m3KD
+                     ), 
+paste0(""))
+  
+  Ab_C2_m4 <- ifelse(max == 4, 
+                     paste0("# Amount (nmol/kg) of Antibody bound to 4 Metabolites1 in peripheral compartment
+d/dt(Ab_C2_m4) <- (CLD_Ab / V_C1_Ab) * Ab_C1_m4 
+                  - (CLD_Ab / V_C2_Ab) * Ab_C2_m4 
+                  "), 
+paste0(""))
+  
+  Ab_C2_b1_m1KD <- ifelse(max > 2, 
+                       paste0(" - K_Ab_Drug_on * (max - 2) * Ab_C2_b1_m1 * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b2_m1
+                              "), 
+                       paste0(""))
+  Ab_C2_b1_m1 <- ifelse(max >= 2, 
+                     paste0("# Amount (nmol/kg) of Antibody bound to 1 Protac and 1 Metabolite1 in peripheral compartment
+d/dt(Ab_C2_b1_m1) <- (CLD_Ab / V_C1_Ab) * Ab_C1_b1_m1 
+                  - (CLD_Ab / V_C2_Ab) * Ab_C2_b1_m1 
+                  + K_Ab_Drug_on * (max - 1) * Ab_C2_m1 * Drug_C2_f
+                  - K_Ab_Drug_off * Ab_C2_b1_m1
+                  ", Ab_C2_b1_m1KD
+                     ), 
+paste0(""))
+  
+  Ab_C2_b1_m2KD <- ifelse(max > 3, 
+                          paste0(" - K_Ab_Drug_on * (max - 3) * Ab_C2_b1_m2 * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b2_m2
+                              "), 
+                          paste0(""))
+  Ab_C2_b1_m2 <- ifelse(max >= 3, 
+                        paste0("# Amount (nmol/kg) of Antibody bound to 1 Protac and 2 Metabolites1 in peripheral compartment
+d/dt(Ab_C2_b1_m2) <- (CLD_Ab / V_C1_Ab) * Ab_C1_b1_m2 
+                  - (CLD_Ab / V_C2_Ab) * Ab_C2_b1_m2 
+                  + K_Ab_Drug_on * (max - 2) * Ab_C2_m2 * Drug_C2_f
+                  - K_Ab_Drug_off * Ab_C2_b1_m2
+                  ", Ab_C2_b1_m2KD
+                        ), 
+paste0(""))
+  
+  Ab_C2_b2_m1KD <- ifelse(max > 3, 
+                          paste0(" - K_Ab_Drug_on * (max - 3) * Ab_C2_b2_m1 * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b3_m1
+                              "), 
+                          paste0(""))
+  Ab_C2_b2_m1 <- ifelse(max >= 3, 
+                        paste0("# Amount (nmol/kg) of Antibody bound to 2 Protacs and 1 Metabolite1 in peripheral compartment
+d/dt(Ab_C2_b2_m1) <- (CLD_Ab / V_C1_Ab) * Ab_C1_b2_m1
+                  - (CLD_Ab / V_C2_Ab) * Ab_C2_b2_m1 
+                  + K_Ab_Drug_on * (max - 2) * Ab_C2_b1_m1 * Drug_C2_f
+                  - K_Ab_Drug_off * Ab_C2_b2_m1
+                  ", Ab_C2_b2_m1KD
+                        ), 
+paste0(""))
+  
+  Ab_C2_b1_m3 <- ifelse(max == 4, 
+                        paste0("# Amount (nmol/kg) of Antibody bound to 1 Protac and 3 Metabolites1 in peripheral compartment
+d/dt(Ab_C2_b1_m3) <- (CLD_Ab / V_C1_Ab) * Ab_C1_b1_m3 
+                  - (CLD_Ab / V_C2_Ab) * Ab_C2_b1_m3 
+                  + K_Ab_Drug_on * (max - 3) * Ab_C2_m3 * Drug_C2_f
+                  - K_Ab_Drug_off * Ab_C2_b1_m3
+                  "), 
+paste0(""))
+  
+  Ab_C2_b2_m2 <- ifelse(max == 4, 
+                        paste0("# Amount (nmol/kg) of Antibody bound to 2 Protacs and 2 Metabolites1 in peripheral compartment
+d/dt(Ab_C2_b2_m2) <- (CLD_Ab / V_C1_Ab) * Ab_C1_b2_m2
+                  - (CLD_Ab / V_C2_Ab) * Ab_C2_b2_m2 
+                  + K_Ab_Drug_on * (max - 3) * Ab_C2_b1_m2 * Drug_C2_f
+                  - K_Ab_Drug_off * Ab_C2_b2_m2
+                  "), 
+paste0(""))
+  
+  Ab_C2_b3_m1 <- ifelse(max == 4, 
+                        paste0("# Amount (nmol/kg) of Antibody bound to 3 Protacs and 1 Metabolite1 in peripheral compartment
+d/dt(Ab_C2_b3_m1) <- (CLD_Ab / V_C1_Ab) * Ab_C1_b3_m1
+                  - (CLD_Ab / V_C2_Ab) * Ab_C2_b3_m1 
+                  + K_Ab_Drug_on * (max - 3) * Ab_C2_b2_m1 * Drug_C2_f
+                  - K_Ab_Drug_off * Ab_C2_b3_m1
+                  "), 
+paste0(""))
+  
+  Ab_ex_f_combi1 <- ifelse(max >= 2, 
+                    paste0("Ab_cell_b1_m", 1:(max-1),"_b_ag", collapse=" + "), 
+                    paste0("0"))
+  Ab_ex_f_combi2 <- ifelse(max >= 3, 
+                          paste0("Ab_cell_b2_m", 1:(max-2),"_b_ag", collapse=" + "), 
+                          paste0("0"))
+  Ab_ex_f_combi3 <- ifelse(max == 4, 
+                           paste0(" Ab_cell_b3_m1_b_ag"), 
+                           paste0("0"))
   Ab_ex_f <- ifelse(max >= 2, 
-                    paste0("Ab_cell_b", 2:max,"_b_ag", collapse=" + "), 
+                    paste0("Ab_cell_b", 2:max,"_b_ag + Ab_cell_m", 2:max,"_b_ag", collapse=" + "), 
                     paste0("0"))
   
   Ab_ex_b1KD <- ifelse(max >= 2, 
                        paste0(" - K_Ab_Drug_on * (max - 1) * Ab_ex_b1 / E_Ab * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_ex_b2 / E_Ab
+                                - K_Ab_Meta_on * (max - 1) * Ab_ex_b1 / E_Ab * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_ex_b1_m1 / E_Ab
                               "), 
                        paste0(""))
 
   Ab_ex_b2KD <- ifelse(max > 2, 
                        paste0(" - K_Ab_Drug_on * (max - 2) * Ab_ex_b2 / E_Ab * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_ex_b3 / E_Ab
+                                - K_Ab_Meta_on * (max - 2) * Ab_ex_b2 / E_Ab * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_ex_b2_m1 / E_Ab
                               "), 
                        paste0(""))
   Ab_ex_b2 <- ifelse(max >= 2, 
                      paste0("# Concentration (nM) of Antibody bound to 2 Protacs in tumor extracellular space
 d/dt(Ab_ex_b2) <- (Ab_C1_b2 / V_C1_Ab - Ab_ex_b2 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
-                  + (- K_Ab_cell_ag_on * Ab_ex_b2 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - (", Ab_ex_f, ")) 
+                  + (- K_Ab_cell_ag_on * Ab_ex_b2 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
                   + K_Ab_cell_ag_off * Ab_cell_b2_b_ag) * NC_Tumor * SF / V_tumor 
                   + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_b2_b_ag + Ab_cell_lyso_b2) * SF / V_tumor 
                   - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_b2 
@@ -494,12 +795,14 @@ d/dt(Ab_ex_b2) <- (Ab_C1_b2 / V_C1_Ab - Ab_ex_b2 / E_Ab) * (2 * P_Ab * R_Cap / R
 
   Ab_ex_b3KD <- ifelse(max > 3, 
                        paste0(" - K_Ab_Drug_on * (max - 3) * Ab_ex_b3 / E_Ab * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_ex_b4 / E_Ab
+                                - K_Ab_Meta_on * (max - 3) * Ab_ex_b3 / E_Ab * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_ex_b3_m1 / E_Ab
                               "), 
                        paste0(""))
   Ab_ex_b3 <- ifelse(max >= 3, 
                      paste0("# Concentration (nM) of Antibody bound to 3 Protacs in tumor extracellular space
 d/dt(Ab_ex_b3) <- (Ab_C1_b3 / V_C1_Ab - Ab_ex_b3 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
-                  + (- K_Ab_cell_ag_on * Ab_ex_b3 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - (", Ab_ex_f, ")) 
+                  + (- K_Ab_cell_ag_on * Ab_ex_b3 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
                   + K_Ab_cell_ag_off * Ab_cell_b3_b_ag) * NC_Tumor * SF / V_tumor 
                   + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_b3_b_ag + Ab_cell_lyso_b3) * SF / V_tumor 
                   - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_b3 
@@ -511,7 +814,8 @@ d/dt(Ab_ex_b3) <- (Ab_C1_b3 / V_C1_Ab - Ab_ex_b3 / E_Ab) * (2 * P_Ab * R_Cap / R
   Ab_ex_b4 <- ifelse(max == 4, 
                      paste0("# Concentration (nM) of Antibody bound to 4 Protacs in tumor extracellular space
 d/dt(Ab_ex_b4) <- (Ab_C1_b4 / V_C1_Ab - Ab_ex_b4 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
-                  + (- K_Ab_cell_ag_on * Ab_ex_b4 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - (", Ab_ex_f, ")) 
+                  + (- K_Ab_cell_ag_on * Ab_ex_b4 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
                   + K_Ab_cell_ag_off * Ab_cell_b4_b_ag) * NC_Tumor * SF / V_tumor 
                   + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_b4_b_ag + Ab_cell_lyso_b4) * SF / V_tumor 
                   - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_b4 
@@ -519,17 +823,186 @@ d/dt(Ab_ex_b4) <- (Ab_C1_b4 / V_C1_Ab - Ab_ex_b4 / E_Ab) * (2 * P_Ab * R_Cap / R
                   - K_Ab_Drug_off * Ab_ex_b4 / E_Ab"), 
                      paste0(""))
   
+  Ab_ex_m1KD <- ifelse(max > 1, 
+                       paste0(" - K_Ab_Drug_on * (max - 1) * Ab_ex_m1 / E_Ab * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_ex_b1_m1 / E_Ab
+                                - K_Ab_Meta_on * (max - 1) * Ab_ex_m1 / E_Ab * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_ex_m2 / E_Ab
+                              "), 
+                       paste0(""))
+  
+  Ab_ex_m2KD <- ifelse(max > 2, 
+                       paste0(" - K_Ab_Drug_on * (max - 2) * Ab_ex_m2 / E_Ab * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_ex_b1_m2 / E_Ab
+                                - K_Ab_Meta_on * (max - 2) * Ab_ex_m2 / E_Ab * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_ex_m3 / E_Ab
+                              "), 
+                       paste0(""))
+  Ab_ex_m2 <- ifelse(max >= 2, 
+                     paste0("# Concentration (nM) of Antibody bound to 2 Metabolites1 in tumor extracellular space
+d/dt(Ab_ex_m2) <- (Ab_C1_m2 / V_C1_Ab - Ab_ex_m2 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                  + (- K_Ab_cell_ag_on * Ab_ex_m2 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                  + K_Ab_cell_ag_off * Ab_cell_m2_b_ag) * NC_Tumor * SF / V_tumor 
+                  + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_m2_b_ag + Ab_cell_lyso_m2) * SF / V_tumor 
+                  - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_m2 
+                  + K_Ab_Meta_on * (max - 1) * Ab_ex_m1 / E_Ab * Meta1_ex_f / V_tumor 
+                  - K_Ab_Meta_off * Ab_ex_m2 / E_Ab
+                  ", Ab_ex_m2KD), 
+paste0(""))
+  
+  Ab_ex_m3KD <- ifelse(max > 3, 
+                       paste0(" - K_Ab_Drug_on * (max - 3) * Ab_ex_m3 / E_Ab * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_ex_b1_m3 / E_Ab
+                                - K_Ab_Meta_on * (max - 3) * Ab_ex_m3 / E_Ab * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_ex_m4 / E_Ab
+                              "), 
+                       paste0(""))
+  Ab_ex_m3 <- ifelse(max >= 3, 
+                     paste0("# Concentration (nM) of Antibody bound to 3 Metabolites1 in tumor extracellular space
+d/dt(Ab_ex_m3) <- (Ab_C1_m3 / V_C1_Ab - Ab_ex_m3 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                  + (- K_Ab_cell_ag_on * Ab_ex_m3 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                  + K_Ab_cell_ag_off * Ab_cell_m3_b_ag) * NC_Tumor * SF / V_tumor 
+                  + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_m3_b_ag + Ab_cell_lyso_m3) * SF / V_tumor 
+                  - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_m3 
+                  + K_Ab_Meta_on * (max - 2) * Ab_ex_m2 / E_Ab * Meta1_ex_f / V_tumor 
+                  - K_Ab_Meta_off * Ab_ex_m3 / E_Ab
+                  ", Ab_ex_m3KD), 
+paste0(""))
+  
+  Ab_ex_m4 <- ifelse(max == 4, 
+                     paste0("# Concentration (nM) of Antibody bound to 4 Metabolites1 in tumor extracellular space
+d/dt(Ab_ex_m4) <- (Ab_C1_m4 / V_C1_Ab - Ab_ex_m4 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                  + (- K_Ab_cell_ag_on * Ab_ex_m4 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                  + K_Ab_cell_ag_off * Ab_cell_m4_b_ag) * NC_Tumor * SF / V_tumor 
+                  + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_m4_b_ag + Ab_cell_lyso_m4) * SF / V_tumor 
+                  - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_m4 
+                  + K_Ab_Meta_on * Ab_ex_m3 / E_Ab * Meta1_ex_f / V_tumor 
+                  - K_Ab_Meta_off * Ab_ex_m4 / E_Ab
+                  "), 
+paste0(""))
+  
+  Ab_ex_b1_m1KD <- ifelse(max > 2, 
+                          paste0(" - K_Ab_Drug_on * (max - 2) * Ab_ex_b1_m1 / E_Ab * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_ex_b2_m1 / E_Ab
+                                   - K_Ab_Meta_on * (max - 2) * Ab_ex_b1_m1 / E_Ab * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_ex_b1_m2 / E_Ab
+                              "), 
+                          paste0(""))
+  Ab_ex_b1_m1 <- ifelse(max >= 2, 
+                        paste0("# Concentration (nM) of Antibody bound to 1 Protac and 1 Metabolite1 in tumor extracellular space
+d/dt(Ab_ex_b1_m1) <- (Ab_C1_b1_m1 / V_C1_Ab - Ab_ex_b1_m1 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                    + (- K_Ab_cell_ag_on * Ab_ex_b1_m1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                    + K_Ab_cell_ag_off * Ab_cell_b1_m1_b_ag) * NC_Tumor * SF / V_tumor 
+                    + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_b1_m1_b_ag + Ab_cell_lyso_b1_m1) * SF / V_tumor 
+                    - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_b1_m1 
+                    + K_Ab_Drug_on * (max - 1) * Ab_ex_m1 / E_Ab * Drug_ex_f / V_tumor 
+                    - K_Ab_Drug_off * Ab_ex_b1_m1 / E_Ab
+                    + K_Ab_Meta_on * (max - 1) * Ab_ex_b1 / E_Ab * Meta1_ex_f / V_tumor 
+                    - K_Ab_Meta_off * Ab_ex_b1_m1 / E_Ab
+                    ", Ab_ex_b1_m1KD
+                          ), 
+paste0(""))
+  
+  Ab_ex_b1_m2KD <- ifelse(max > 3, 
+                          paste0(" - K_Ab_Drug_on * (max - 3) * Ab_ex_b1_m2 / E_Ab * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_ex_b2_m2 / E_Ab
+                                   - K_Ab_Meta_on * (max - 3) * Ab_ex_b1_m2 / E_Ab * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_ex_b1_m3 / E_Ab
+                              "), 
+                          paste0(""))
+  Ab_ex_b1_m2 <- ifelse(max >= 3, 
+                        paste0("# Concentration (nM) of Antibody bound to 1 Protac and 2 Metabolites1 in tumor extracellular space
+d/dt(Ab_ex_b1_m2) <- (Ab_C1_b1_m2 / V_C1_Ab - Ab_ex_b1_m2 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                    + (- K_Ab_cell_ag_on * Ab_ex_b1_m2 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                    + K_Ab_cell_ag_off * Ab_cell_b1_m2_b_ag) * NC_Tumor * SF / V_tumor 
+                    + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_b1_m2_b_ag + Ab_cell_lyso_b1_m2) * SF / V_tumor 
+                    - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_b1_m2 
+                    + K_Ab_Drug_on * (max - 2) * Ab_ex_m2 / E_Ab * Drug_ex_f / V_tumor 
+                    - K_Ab_Drug_off * Ab_ex_b1_m2 / E_Ab
+                    + K_Ab_Meta_on * (max - 2) * Ab_ex_b1_m1 / E_Ab * Meta1_ex_f / V_tumor 
+                    - K_Ab_Meta_off * Ab_ex_b1_m2 / E_Ab
+                    ", Ab_ex_b1_m2KD
+                        ), 
+paste0(""))
+  
+  Ab_ex_b2_m1KD <- ifelse(max > 3, 
+                          paste0(" - K_Ab_Drug_on * (max - 3) * Ab_ex_b2_m1 / E_Ab * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_ex_b3_m1 / E_Ab
+                                   - K_Ab_Meta_on * (max - 3) * Ab_ex_b2_m1 / E_Ab * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_ex_b2_m2 / E_Ab
+                              "), 
+                          paste0(""))
+  Ab_ex_b2_m1 <- ifelse(max >= 3, 
+                        paste0("# Concentration (nM) of Antibody bound to 2 Protacs and 1 Metabolite1 in tumor extracellular space
+d/dt(Ab_ex_b2_m1) <- (Ab_C1_b2_m1 / V_C1_Ab - Ab_ex_b2_m1 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                    + (- K_Ab_cell_ag_on * Ab_ex_b2_m1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                    + K_Ab_cell_ag_off * Ab_cell_b2_m1_b_ag) * NC_Tumor * SF / V_tumor 
+                    + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_b2_m1_b_ag + Ab_cell_lyso_b2_m1) * SF / V_tumor 
+                    - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_b2_m1 
+                    + K_Ab_Drug_on * (max - 2) * Ab_ex_b1_m1 / E_Ab * Drug_ex_f / V_tumor 
+                    - K_Ab_Drug_off * Ab_ex_b2_m1 / E_Ab
+                    + K_Ab_Meta_on * (max - 2) * Ab_ex_b2 / E_Ab * Meta1_ex_f / V_tumor 
+                    - K_Ab_Meta_off * Ab_ex_b2_m1 / E_Ab
+                    ", Ab_ex_b2_m1KD
+                        ), 
+paste0(""))
+  
+  Ab_ex_b1_m3 <- ifelse(max == 4, 
+                        paste0("# Concentration (nM) of Antibody bound to 1 Protac and 3 Metabolites1 in tumor extracellular space
+d/dt(Ab_ex_b1_m3) <- (Ab_C1_b1_m3 / V_C1_Ab - Ab_ex_b1_m3 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                    + (- K_Ab_cell_ag_on * Ab_ex_b1_m3 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                    + K_Ab_cell_ag_off * Ab_cell_b1_m3_b_ag) * NC_Tumor * SF / V_tumor 
+                    + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_b1_m3_b_ag + Ab_cell_lyso_b1_m3) * SF / V_tumor 
+                    - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_b1_m3
+                    + K_Ab_Drug_on * (max - 3) * Ab_ex_m3 / E_Ab * Drug_ex_f / V_tumor 
+                    - K_Ab_Drug_off * Ab_ex_b1_m3 / E_Ab
+                    + K_Ab_Meta_on * (max - 3) * Ab_ex_b1_m2 / E_Ab * Meta1_ex_f / V_tumor 
+                    - K_Ab_Meta_off * Ab_ex_b1_m3 / E_Ab
+                    "), 
+paste0(""))
+  
+  Ab_ex_b2_m2 <- ifelse(max == 4, 
+                        paste0("# Concentration (nM) of Antibody bound to 2 Protacs and 2 Metabolites1 in tumor extracellular space
+d/dt(Ab_ex_b2_m2) <- (Ab_C1_b2_m2 / V_C1_Ab - Ab_ex_b2_m2 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                    + (- K_Ab_cell_ag_on * Ab_ex_b2_m2 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                    + K_Ab_cell_ag_off * Ab_cell_b2_m2_b_ag) * NC_Tumor * SF / V_tumor 
+                    + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_b2_m2_b_ag + Ab_cell_lyso_b2_m2) * SF / V_tumor 
+                    - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_b2_m2
+                    + K_Ab_Drug_on * (max - 3) * Ab_ex_b1_m2 / E_Ab * Drug_ex_f / V_tumor 
+                    - K_Ab_Drug_off * Ab_ex_b2_m2 / E_Ab
+                    + K_Ab_Meta_on * (max - 3) * Ab_ex_b2_m1 / E_Ab * Meta1_ex_f / V_tumor 
+                    - K_Ab_Meta_off * Ab_ex_b2_m2 / E_Ab
+                    "), 
+paste0(""))
+  
+  Ab_ex_b3_m1 <- ifelse(max == 4, 
+                        paste0("# Concentration (nM) of Antibody bound to 3 Protacs and 1 Metabolite1 in tumor extracellular space
+d/dt(Ab_ex_b3_m1) <- (Ab_C1_b3_m1 / V_C1_Ab - Ab_ex_b3_m1 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                    + (- K_Ab_cell_ag_on * Ab_ex_b3_m1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                    + K_Ab_cell_ag_off * Ab_cell_b3_m1_b_ag) * NC_Tumor * SF / V_tumor 
+                    + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_b3_m1_b_ag + Ab_cell_lyso_b3_m1) * SF / V_tumor 
+                    - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_b3_m1
+                    + K_Ab_Drug_on * (max - 3) * Ab_ex_b2_m1 / E_Ab * Drug_ex_f / V_tumor 
+                    - K_Ab_Drug_off * Ab_ex_b3_m1 / E_Ab
+                    + K_Ab_Meta_on * (max - 3) * Ab_ex_b3 / E_Ab * Meta1_ex_f / V_tumor 
+                    - K_Ab_Meta_off * Ab_ex_b3_m1 / E_Ab
+                    "), 
+paste0(""))
+  
   Ab_cell_b1KD <- ifelse(max >= 2, 
-                       paste0(" - K_Ab_Drug_on * (max - 1) * Ab_cell_b1_b_ag * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_cell_b2_b_ag"), 
+                       paste0(" - K_Ab_Drug_on * (max - 1) * Ab_cell_b1_b_ag * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_cell_b2_b_ag
+                                - K_Ab_Meta_on * (max - 1) * Ab_cell_b1_b_ag * Meta1_ex_f / V_tumor 
+                                + K_Ab_Meta_off * Ab_cell_b1_m1_b_ag 
+                              "), 
                        paste0(""))
   
   Ab_cell_b2KD <- ifelse(max > 2, 
                          paste0(" - K_Ab_Drug_on * (max - 2) * Ab_cell_b2_b_ag * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_cell_b3_b_ag
+                                   - K_Ab_Meta_on * (max - 2) * Ab_cell_b2_b_ag * Meta1_ex_f / V_tumor 
+                                   + K_Ab_Meta_off * Ab_cell_b2_m1_b_ag 
                                 "), 
                          paste0(""))
   Ab_cell_b2_b_ag <- ifelse(max >= 2, 
                      paste0("# Number of Antibody molecules bound to 2 Protacs bound to binding target on a single tumor cell
-d/dt(Ab_cell_b2_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b2 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - (", Ab_ex_f, ")) 
+d/dt(Ab_cell_b2_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b2 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
                          - K_Ab_cell_ag_off * Ab_cell_b2_b_ag 
                          - K_Ab_cell_int * Ab_cell_b2_b_ag 
                          - log(2) / DT_tumor * Ab_cell_b2_b_ag  
@@ -540,11 +1013,14 @@ d/dt(Ab_cell_b2_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b2 / E_Ab * (Ag_cell_t - Ab_cel
 
   Ab_cell_b3KD <- ifelse(max > 3, 
                          paste0(" - K_Ab_Drug_on * (max - 3) * Ab_cell_b3_b_ag * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_cell_b4_b_ag
+                                   - K_Ab_Meta_on * (max - 3) * Ab_cell_b3_b_ag * Meta1_ex_f / V_tumor 
+                                   + K_Ab_Meta_off * Ab_cell_b3_m1_b_ag 
                                 "), 
                          paste0(""))
   Ab_cell_b3_b_ag <- ifelse(max >= 3, 
                             paste0("# Number of Antibody molecules bound to 3 Protacs bound to binding target on a single tumor cell
-d/dt(Ab_cell_b3_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b3 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - (", Ab_ex_f, ")) 
+d/dt(Ab_cell_b3_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b3 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
                          - K_Ab_cell_ag_off * Ab_cell_b3_b_ag 
                          - K_Ab_cell_int * Ab_cell_b3_b_ag 
                          - log(2) / DT_tumor * Ab_cell_b3_b_ag  
@@ -555,7 +1031,8 @@ d/dt(Ab_cell_b3_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b3 / E_Ab * (Ag_cell_t - Ab_cel
   
   Ab_cell_b4_b_ag <- ifelse(max == 4, 
                             paste0("# Number of Antibody molecules bound to 4 Protacs bound to binding target on a single tumor cell
-d/dt(Ab_cell_b4_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b4 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - (", Ab_ex_f, ")) 
+d/dt(Ab_cell_b4_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b4 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
                          - K_Ab_cell_ag_off * Ab_cell_b4_b_ag 
                          - K_Ab_cell_int * Ab_cell_b4_b_ag 
                          - log(2) / DT_tumor * Ab_cell_b4_b_ag  
@@ -563,16 +1040,222 @@ d/dt(Ab_cell_b4_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b4 / E_Ab * (Ag_cell_t - Ab_cel
                          - K_Ab_Drug_off * Ab_cell_b4_b_ag"), 
                             paste0(""))
   
+  Ab_cell_m1KD <- ifelse(max >= 2, 
+                         paste0(" - K_Ab_Drug_on * (max - 1) * Ab_cell_m1_b_ag * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_cell_b1_m1_b_ag
+                                  - K_Ab_Meta_on * (max - 1) * Ab_cell_m1_b_ag * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_cell_m2_b_ag
+                                "), 
+                         paste0(""))
+  
+  Ab_cell_m2KD <- ifelse(max > 2, 
+                         paste0(" - K_Ab_Drug_on * (max - 2) * Ab_cell_m2_b_ag * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_cell_b1_m2_b_ag
+                                  - K_Ab_Meta_on * (max - 2) * Ab_cell_m2_b_ag * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_cell_m3_b_ag
+                                "), 
+                         paste0(""))
+  Ab_cell_m2_b_ag <- ifelse(max >= 2, 
+                            paste0("# Number of Antibody molecules bound to 2 Metabolites1 bound to binding target on a single tumor cell
+d/dt(Ab_cell_m2_b_ag) <- K_Ab_cell_ag_on * Ab_ex_m2 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                          - K_Ab_cell_ag_off * Ab_cell_m2_b_ag 
+                          - K_Ab_cell_int * Ab_cell_m2_b_ag 
+                          - log(2) / DT_tumor * Ab_cell_m2_b_ag 
+                          + K_Ab_Meta_on * (max - 1) * Ab_cell_m1_b_ag * Meta1_ex_f / V_tumor
+                          - K_Ab_Meta_off * Ab_cell_m2_b_ag 
+                         ", Ab_cell_m2KD), 
+paste0(""))
+  
+  Ab_cell_m3KD <- ifelse(max > 3, 
+                         paste0(" - K_Ab_Drug_on * (max - 3) * Ab_cell_m3_b_ag * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_cell_b1_m3_b_ag
+                                  - K_Ab_Meta_on * (max - 3) * Ab_cell_m3_b_ag * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_cell_m4_b_ag
+                                "), 
+                         paste0(""))
+  Ab_cell_m3_b_ag <- ifelse(max >= 3, 
+                            paste0("# Number of Antibody molecules bound to 3 Metabolites1 bound to binding target on a single tumor cell
+d/dt(Ab_cell_m3_b_ag) <- K_Ab_cell_ag_on * Ab_ex_m3 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                          - K_Ab_cell_ag_off * Ab_cell_m3_b_ag 
+                          - K_Ab_cell_int * Ab_cell_m3_b_ag 
+                          - log(2) / DT_tumor * Ab_cell_m3_b_ag 
+                          + K_Ab_Meta_on * (max - 2) * Ab_cell_m2_b_ag * Meta1_ex_f / V_tumor
+                          - K_Ab_Meta_off * Ab_cell_m3_b_ag 
+                         ", Ab_cell_m3KD), 
+paste0(""))
+  
+  Ab_cell_m4_b_ag <- ifelse(max == 4, 
+                            paste0("# Number of Antibody molecules bound to 4 Metabolites1 bound to binding target on a single tumor cell
+d/dt(Ab_cell_m4_b_ag) <- K_Ab_cell_ag_on * Ab_ex_m4 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                         - K_Ab_cell_ag_off * Ab_cell_m4_b_ag 
+                         - K_Ab_cell_int * Ab_cell_m4_b_ag 
+                         - log(2) / DT_tumor * Ab_cell_m4_b_ag  
+                         + K_Ab_Meta_on * Ab_cell_m3_b_ag * Meta1_ex_f / V_tumor 
+                         - K_Ab_Meta_off * Ab_cell_m4_b_ag"), 
+paste0(""))
+  
+  Ab_cell_b1_m1KD <- ifelse(max > 2, 
+                          paste0(" - K_Ab_Drug_on * (max - 2) * Ab_cell_b1_m1_b_ag * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_cell_b2_m1_b_ag 
+                                   - K_Ab_Meta_on * (max - 2) * Ab_cell_b1_m1_b_ag * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_cell_b1_m2_b_ag 
+                              "), 
+                          paste0(""))
+  Ab_cell_b1_m1_b_ag <- ifelse(max >= 2, 
+                        paste0("# Number of Antibody bound to 1 Protac and 1 Metabolite1 bound to binding target on a single tumor cell
+d/dt(Ab_cell_b1_m1_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b1_m1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                          - K_Ab_cell_ag_off * Ab_cell_b1_m1_b_ag 
+                          - K_Ab_cell_int * Ab_cell_b1_m1_b_ag 
+                          - log(2) / DT_tumor * Ab_cell_b1_m1_b_ag 
+                          + K_Ab_Meta_on * (max - 1) * Ab_cell_b1_b_ag * Meta1_ex_f / V_tumor
+                          - K_Ab_Meta_off * Ab_cell_b1_m1_b_ag 
+                          + K_Ab_Drug_on * (max - 1) * Ab_cell_m1_b_ag * Drug_ex_f / V_tumor
+                          - K_Ab_Drug_off * Ab_cell_b1_m1_b_ag 
+                          ", Ab_cell_b1_m1KD
+                            ), 
+paste0(""))
+  
+  Ab_cell_b1_m2KD <- ifelse(max > 3, 
+                            paste0(" - K_Ab_Drug_on * (max - 3) * Ab_cell_b1_m2_b_ag * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_cell_b2_m2_b_ag 
+                                     - K_Ab_Meta_on * (max - 3) * Ab_cell_b1_m2_b_ag * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_cell_b1_m3_b_ag 
+                              "), 
+                            paste0(""))
+  Ab_cell_b1_m2_b_ag <- ifelse(max >= 3, 
+                          paste0("# Number of Antibody bound to 1 Protac and 2 Metabolites1 bound to binding target on a single tumor cell
+d/dt(Ab_cell_b1_m2_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b1_m2 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                          - K_Ab_cell_ag_off * Ab_cell_b1_m2_b_ag 
+                          - K_Ab_cell_int * Ab_cell_b1_m2_b_ag 
+                          - log(2) / DT_tumor * Ab_cell_b1_m2_b_ag 
+                          + K_Ab_Meta_on * (max - 2) * Ab_cell_b1_m1_b_ag * Meta1_ex_f / V_tumor
+                          - K_Ab_Meta_off * Ab_cell_b1_m2_b_ag 
+                          + K_Ab_Drug_on * (max - 2) * Ab_cell_m2_b_ag * Drug_ex_f / V_tumor
+                          - K_Ab_Drug_off * Ab_cell_b1_m2_b_ag 
+                          ", Ab_cell_b1_m2KD
+                          ), 
+paste0(""))
+  
+  Ab_cell_b2_m1KD <- ifelse(max > 3, 
+                            paste0(" - K_Ab_Drug_on * (max - 3) * Ab_cell_b2_m1_b_ag * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_cell_b3_m1_b_ag 
+                                     - K_Ab_Meta_on * (max - 3) * Ab_cell_b2_m1_b_ag * Meta1_ex_f / V_tumor + K_Ab_Meta_off * Ab_cell_b2_m2_b_ag 
+                              "), 
+                            paste0(""))
+  Ab_cell_b2_m1_b_ag <- ifelse(max >= 3, 
+                          paste0("# Number of Antibody bound to 2 Protacs and 1 Metabolite1 bound to binding target on a single tumor cell
+d/dt(Ab_cell_b2_m1_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b2_m1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                          - K_Ab_cell_ag_off * Ab_cell_b2_m1_b_ag 
+                          - K_Ab_cell_int * Ab_cell_b2_m1_b_ag 
+                          - log(2) / DT_tumor * Ab_cell_b2_m1_b_ag 
+                          + K_Ab_Meta_on * (max - 2) * Ab_cell_b2_b_ag * Meta1_ex_f / V_tumor
+                          - K_Ab_Meta_off * Ab_cell_b2_m1_b_ag 
+                          + K_Ab_Drug_on * (max - 2) * Ab_cell_b1_m1_b_ag * Drug_ex_f / V_tumor
+                          - K_Ab_Drug_off * Ab_cell_b2_m1_b_ag 
+                          ", Ab_cell_b2_m1KD
+                          ), 
+paste0(""))
+  
+  Ab_cell_b1_m3_b_ag <- ifelse(max == 4, 
+                          paste0("# Number of Antibody bound to 1 Protac and 3 Metabolites1 bound to binding target on a single tumor cell
+d/dt(Ab_cell_b1_m3_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b1_m3 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                          - K_Ab_cell_ag_off * Ab_cell_b1_m3_b_ag 
+                          - K_Ab_cell_int * Ab_cell_b1_m3_b_ag 
+                          - log(2) / DT_tumor * Ab_cell_b1_m3_b_ag 
+                          + K_Ab_Meta_on * (max - 3) * Ab_cell_b1_m2_b_ag * Meta1_ex_f / V_tumor
+                          - K_Ab_Meta_off * Ab_cell_b1_m3_b_ag 
+                          + K_Ab_Drug_on * (max - 3) * Ab_cell_m3_b_ag * Drug_ex_f / V_tumor
+                          - K_Ab_Drug_off * Ab_cell_b1_m3_b_ag 
+                          "), 
+paste0(""))
+  
+  Ab_cell_b2_m2_b_ag <- ifelse(max == 4, 
+                          paste0("# Number of Antibody bound to 2 Protacs and 2 Metabolites1 bound to binding target on a single tumor cell
+d/dt(Ab_cell_b2_m2_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b2_m2 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                          - K_Ab_cell_ag_off * Ab_cell_b2_m2_b_ag 
+                          - K_Ab_cell_int * Ab_cell_b2_m2_b_ag 
+                          - log(2) / DT_tumor * Ab_cell_b2_m2_b_ag 
+                          + K_Ab_Meta_on * (max - 3) * Ab_cell_b2_m1_b_ag * Meta1_ex_f / V_tumor
+                          - K_Ab_Meta_off * Ab_cell_b2_m2_b_ag 
+                          + K_Ab_Drug_on * (max - 3) * Ab_cell_b1_m2_b_ag * Drug_ex_f / V_tumor
+                          - K_Ab_Drug_off * Ab_cell_b2_m2_b_ag 
+                          "), 
+paste0(""))
+  
+  Ab_cell_b3_m1_b_ag <- ifelse(max == 4, 
+                          paste0("# Number of Antibody bound to 3 Protacs and 1 Metabolite1 bound to binding target on a single tumor cell
+d/dt(Ab_cell_b3_m1_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b3_m1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                          - (", Ab_ex_f, ") - (", Ab_ex_f_combi1, ") - (", Ab_ex_f_combi2, ") - ", Ab_ex_f_combi3, ") 
+                          - K_Ab_cell_ag_off * Ab_cell_b3_m1_b_ag 
+                          - K_Ab_cell_int * Ab_cell_b3_m1_b_ag 
+                          - log(2) / DT_tumor * Ab_cell_b3_m1_b_ag 
+                          + K_Ab_Meta_on * (max - 3) * Ab_cell_b3_b_ag * Meta1_ex_f / V_tumor
+                          - K_Ab_Meta_off * Ab_cell_b3_m1_b_ag 
+                          + K_Ab_Drug_on * (max - 3) * Ab_cell_b2_m1_b_ag * Drug_ex_f / V_tumor
+                          - K_Ab_Drug_off * Ab_cell_b3_m1_b_ag 
+                          "), 
+paste0(""))
+  
   Ab_cell_lyso_bi <- paste0("# Number of Antibody molecules bound to ", 1:max, " Protacs in lysosomal space on a single tumor cell
 d/dt(Ab_cell_lyso_b", 1:max, ") <- K_Ab_cell_int * Ab_cell_b", 1:max, "_b_ag 
-                              - K_Ab_deg * Ab_cell_lyso_b", 1:max, " 
-                              + K_Ab_cell_lyso_pino * Ab_ex_b", 1:max, " / (E_Ab * SF) 
-                              - log(2) / DT_tumor * Ab_cell_lyso_b", 1:max, 
-                              "
-                              ", collapse="\n")
+                                  - K_Ab_deg * Ab_cell_lyso_b", 1:max, " 
+                                  + K_Ab_cell_lyso_pino * Ab_ex_b", 1:max, " / (E_Ab * SF) 
+                                  - log(2) / DT_tumor * Ab_cell_lyso_b", 1:max, 
+                                  "
+                                  ", collapse="\n")
   
-  Drug_cell_lyso_f <- paste0("K_Ab_deg * Ab_cell_lyso_b", 1:max, " * ", 1:max, collapse=" + ")
-
+  Ab_cell_lyso_mj <- paste0("# Number of Antibody molecules bound to ", 1:max, " Metabolites1 in lysosomal space on a single tumor cell
+d/dt(Ab_cell_lyso_m", 1:max, ") <- K_Ab_cell_int * Ab_cell_m", 1:max, "_b_ag 
+                                  - K_Ab_deg * Ab_cell_lyso_m", 1:max, " 
+                                  + K_Ab_cell_lyso_pino * Ab_ex_m", 1:max, " / (E_Ab * SF) 
+                                  - log(2) / DT_tumor * Ab_cell_lyso_m", 1:max, 
+                                  "
+                                  ", collapse="\n")
+  
+    Ab_cell_lyso_b1_mj <- ifelse(max > 1, 
+                          paste0("# Number of Antibody molecules bound to 1 Protac and ", 1:(max-1), " Metabolites1 in lysosomal space on a single tumor cell
+d/dt(Ab_cell_lyso_b1_m", 1:(max-1), ") <- K_Ab_cell_int * Ab_cell_b1_m", 1:(max-1), "_b_ag 
+                                          - K_Ab_deg * Ab_cell_lyso_b1_m", 1:(max-1), " 
+                                          + K_Ab_cell_lyso_pino * Ab_ex_b1_m", 1:(max-1), " / (E_Ab * SF) 
+                                          - log(2) / DT_tumor * Ab_cell_lyso_b1_m", 1:(max-1), 
+                                          "
+                                          ", collapse="\n"), 
+paste0(""))
+    
+    Ab_cell_lyso_b2_mj <- ifelse(max > 2,
+                          paste0("# Number of Antibody molecules bound to 2 Protacs and ", 1:(max-2), " Metabolites1 in lysosomal space on a single tumor cell
+d/dt(Ab_cell_lyso_b2_m", 1:(max-2), ") <- K_Ab_cell_int * Ab_cell_b2_m", 1:(max-2), "_b_ag 
+                                          - K_Ab_deg * Ab_cell_lyso_b2_m", 1:(max-2), " 
+                                          + K_Ab_cell_lyso_pino * Ab_ex_b2_m", 1:(max-2), " / (E_Ab * SF) 
+                                          - log(2) / DT_tumor * Ab_cell_lyso_b2_m", 1:(max-2), 
+                                          "
+                                          ", collapse="\n"), 
+paste0(""))
+    
+    Ab_cell_lyso_b3_m1 <- ifelse(max == 4,
+                          paste0("# Number of Antibody molecules bound to 3 Protacs and 1 Metabolite1 in lysosomal space on a single tumor cell
+d/dt(Ab_cell_lyso_b3_m1) <- K_Ab_cell_int * Ab_cell_b3_m1_b_ag 
+                            - K_Ab_deg * Ab_cell_lyso_b3_m1 
+                            + K_Ab_cell_lyso_pino * Ab_ex_b3_m1 / (E_Ab * SF) 
+                            - log(2) / DT_tumor * Ab_cell_lyso_b3_m1                              
+          
+                            "), 
+paste0(""))
+    
+    Drug_cell_lyso_fDeg <- ifelse(max >= 1, 
+                      paste0("Ab_cell_b", 1:max,"_b_ag * ", 1:max, collapse=" + "), 
+                      paste0("0"))
+    Meta1_cell_lyso_fDeg <- ifelse(max >= 1, 
+                                  paste0("Ab_cell_m", 1:max,"_b_ag * ", 1:max, collapse=" + "), 
+                                  paste0("0"))
+    Meta1_cell_lyso_f_combi1 <- ifelse(max >= 2, 
+                             paste0("Ab_cell_b1_m", 1:(max-1),"_b_ag * ", 1:(max-1), collapse=" + "), 
+                             paste0("0"))
+    Meta1_cell_lyso_f_combi2 <- ifelse(max >= 3, 
+                             paste0("Ab_cell_b2_m", 1:(max-2),"_b_ag * ", 1:(max-2), collapse=" + "), 
+                             paste0("0"))
+  
+    Drug_cell_lyso_f <- paste0("K_Ab_deg * ((", Drug_cell_lyso_fDeg, ") + (", Ab_ex_f_combi1, ") + (", Ab_ex_f_combi2, ") * 2 + ", Ab_ex_f_combi3, " * 3)", collapse=" + ")
+    
+    Meta1_cell_lyso_f <- paste0("K_Ab_deg * ((", Meta1_cell_lyso_fDeg, ") + (", Meta1_cell_lyso_f_combi1, ") + (", Meta1_cell_lyso_f_combi2, ") + ", Ab_ex_f_combi3, ")", collapse=" + ")
+  
   
   Model <- paste0("
  # Modeling assignemnts -----------------------------------
@@ -602,6 +1285,8 @@ d/dt(Ab_cell_lyso_b", 1:max, ") <- K_Ab_cell_int * Ab_cell_b", 1:max, "_b_ag
                     - (Ab_C1_f / V_C1_Ab - Ab_ex_f / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
                     - K_Ab_Drug_on * max * Ab_C1_f * Drug_C1_f
                     + K_Ab_Drug_off * Ab_C1_b1
+                    - K_Ab_Meta_on * max * Ab_C1_f * Meta1_C1_f
+                    + K_Ab_Meta_off * Ab_C1_m1
   
   # Amount (nmol/kg) of Antibody bound to 1 Protac in central compartment/plasma
   d/dt(Ab_C1_b1) <- - (CL_Ab / V_C1_Ab) * Ab_C1_b1 
@@ -615,6 +1300,25 @@ d/dt(Ab_cell_lyso_b", 1:max, ") <- K_Ab_cell_int * Ab_cell_b", 1:max, "_b_ag
  {{Ab_C1_b2}}
  {{Ab_C1_b3}}
  {{Ab_C1_b4}}
+ 
+ # Amount (nmol/kg) of Antibody bound to 1 Metabolite1 in central compartment/plasma
+ d/dt(Ab_C1_m1) <- - (CL_Ab / V_C1_Ab) * Ab_C1_m1 
+                  - (CLD_Ab / V_C1_Ab) * Ab_C1_m1 
+                  + (CLD_Ab / V_C2_Ab) * Ab_C2_m1 
+                  - (Ab_C1_m1 / V_C1_Ab - Ab_ex_m1 / E_Ab) * V_tumor / BW * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                  + K_Ab_Meta_on * max * Ab_C1_f * Meta1_C1_f
+                  - K_Ab_Meta_off * Ab_C1_m1
+                  {{Ab_C1_m1KD}}
+ 
+ {{Ab_C1_m2}}
+ {{Ab_C1_m3}}
+ {{Ab_C1_m4}}
+ {{Ab_C1_b1_m1}}
+ {{Ab_C1_b1_m2}}
+ {{Ab_C1_b2_m1}}
+ {{Ab_C1_b1_m3}}
+ {{Ab_C1_b2_m2}}
+ {{Ab_C1_b3_m1}}
 
   # Concentration (nmol/l) of free (unbound) Drug in central compartment/plasma
   d/dt(Drug_C1_f) <- - CL_Drug / V_C1_Drug * Drug_C1_f 
@@ -623,11 +1327,23 @@ d/dt(Ab_cell_lyso_b", 1:max, ") <- K_Ab_cell_int * Ab_cell_b", 1:max, "_b_ag
                      - (Drug_C1_f - Drug_ex_f / (V_tumor * E_Drug)) * V_tumor / (V_C1_Drug * BW) * (2 * P_Drug * R_Cap / R_Krogh^2 + 6 * D_Drug / R_Tumor^2)
                      - K_Drug_ex_ntp_on_off * (1 - f_ex_ub) * Drug_C1_f 
                      + K_Drug_ex_ntp_on_off * f_ex_ub * Drug_C1_b_ntp
+                     - K_Drug_C1_met * Drug_C1_f
                      + {{Drug_C1_f}}
  
   # Concentration (nmol/l) of drug bound to unspecific protein in central compartment/plasma
   d/dt(Drug_C1_b_ntp) <- K_Drug_ex_ntp_on_off * (1 - f_ex_ub) * Drug_C1_f 
                         - K_Drug_ex_ntp_on_off * f_ex_ub * Drug_C1_b_ntp
+ 
+  # Concentration (nmol/l) of free (unbound) Metabolite1 in central compartment/plasma
+  d/dt(Meta1_C1_f) <- - CL_Meta / V_C1_Meta * Meta1_C1_f 
+                     - (Meta1_C1_f - Meta1_ex_f / (V_tumor * E_Meta)) * V_tumor / (V_C1_Meta * BW) * (2 * P_Meta * R_Cap / R_Krogh^2 + 6 * D_Meta / R_Tumor^2)
+                     + K_Drug_C1_met * Drug_C1_f
+                     + {{Meta1_C1_f}}
+ 
+  # Concentration (nmol/l) of free (unbound) Metabolite2 in central compartment/plasma
+  d/dt(Meta2_C1_f) <- - CL_Meta / V_C1_Meta * Meta2_C1_f 
+                     - (Meta2_C1_f - Meta2_ex_f / (V_tumor * E_Meta)) * V_tumor / (V_C1_Meta * BW) * (2 * P_Meta * R_Cap / R_Krogh^2 + 6 * D_Meta / R_Tumor^2)
+                     + K_Drug_C1_met * Drug_C1_f
  
   # Amount (nmol/kg) of free Antibody (bound to 0 Protacs) in peripheral compartment
   d/dt(Ab_C2_f) <- CLD_Ab / V_C1_Ab * Ab_C1_f 
@@ -646,22 +1362,41 @@ d/dt(Ab_cell_lyso_b", 1:max, ") <- K_Ab_cell_int * Ab_cell_b", 1:max, "_b_ag
  {{Ab_C2_b3}}
  {{Ab_C2_b4}}
  
+  # Amount (nmol/kg) of Antibody bound to 1 Metabolite1 in peripheral compartment
+  d/dt(Ab_C2_m1) <- (CLD_Ab / V_C1_Ab) * Ab_C1_m1 
+                    - (CLD_Ab / V_C2_Ab) * Ab_C2_m1 
+                    {{Ab_C2_m1KD}}
+
+ {{Ab_C2_m2}}
+ {{Ab_C2_m3}}
+ {{Ab_C2_m4}}
+ {{Ab_C2_b1_m1}}
+ {{Ab_C2_b1_m2}}
+ {{Ab_C2_b2_m1}}
+ {{Ab_C2_b1_m3}}
+ {{Ab_C2_b2_m2}}
+ {{Ab_C2_b3_m1}}
+ 
   # Concentration (nmol/l) of drug in peripheral compartment
   d/dt(Drug_C2_f) <- CLD_Drug / V_C2_Drug * Drug_C1_f
                     - CLD_Drug / V_C2_Drug * Drug_C2_f
  
   # Concentration (nM) of free Antibody (bound to 0 Protacs) in tumor extracellular space
   d/dt(Ab_ex_f) <- (Ab_C1_f / V_C1_Ab - Ab_ex_f / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
-                    + (- K_Ab_cell_ag_on * Ab_ex_f / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - ({{Ab_ex_f}})) 
+                    + (- K_Ab_cell_ag_on * Ab_ex_f / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - ({{Ab_ex_f}}) - ({{Ab_ex_f_combi1}}) - ({{Ab_ex_f_combi2}}) - {{Ab_ex_f_combi3}}) 
                     + K_Ab_cell_ag_off * Ab_cell_f_b_ag) * NC_Tumor * SF / V_tumor 
                     + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_f_b_ag) * SF / V_tumor 
                     - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_f
                     - K_Ab_Drug_on * max * Ab_ex_f / E_Ab * Drug_ex_f / V_tumor
                     + K_Ab_Drug_off * Ab_ex_b1 / E_Ab
+                    - K_Ab_Meta_on * max * Ab_ex_f / E_Ab * Meta1_ex_f / V_tumor
+                    + K_Ab_Meta_off * Ab_ex_m1 / E_Ab
  
   # Concentration (nM) of Antibody bound to 1 Protac in tumor extracellular space
   d/dt(Ab_ex_b1) <- (Ab_C1_b1 / V_C1_Ab - Ab_ex_b1 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
-                    + (- K_Ab_cell_ag_on * Ab_ex_b1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - ({{Ab_ex_f}})) 
+                    + (- K_Ab_cell_ag_on * Ab_ex_b1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - ({{Ab_ex_f}}) - ({{Ab_ex_f_combi1}}) - ({{Ab_ex_f_combi2}}) - {{Ab_ex_f_combi3}}) 
                     + K_Ab_cell_ag_off * Ab_cell_b1_b_ag) * NC_Tumor * SF / V_tumor 
                     + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_b1_b_ag + Ab_cell_lyso_b1) * SF / V_tumor 
                     - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_b1
@@ -673,22 +1408,61 @@ d/dt(Ab_cell_lyso_b", 1:max, ") <- K_Ab_cell_int * Ab_cell_b", 1:max, "_b_ag
  {{Ab_ex_b3}}
  {{Ab_ex_b4}}
  
+  # Concentration (nM) of Antibody bound to 1 Metabolite1 in tumor extracellular space
+  d/dt(Ab_ex_m1) <- (Ab_C1_m1 / V_C1_Ab - Ab_ex_m1 / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
+                    + (- K_Ab_cell_ag_on * Ab_ex_m1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - ({{Ab_ex_f}}) - ({{Ab_ex_f_combi1}}) - ({{Ab_ex_f_combi2}}) - {{Ab_ex_f_combi3}}) 
+                    + K_Ab_cell_ag_off * Ab_cell_m1_b_ag) * NC_Tumor * SF / V_tumor 
+                    + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Ab_cell_m1_b_ag + Ab_cell_lyso_m1) * SF / V_tumor 
+                    - K_Ab_cell_lyso_pino * NCL_tumor / E_Ab * Ab_ex_m1
+                    + K_Ab_Meta_on * max * Ab_ex_f / E_Ab * Meta1_ex_f / V_tumor 
+                    - K_Ab_Meta_off * Ab_ex_m1 / E_Ab
+                    {{Ab_ex_m1KD}}
+ 
+ {{Ab_ex_m2}}
+ {{Ab_ex_m3}}
+ {{Ab_ex_m4}}
+ {{Ab_ex_b1_m1}}
+ {{Ab_ex_b1_m2}}
+ {{Ab_ex_b2_m1}}
+ {{Ab_ex_b1_m3}}
+ {{Ab_ex_b2_m2}}
+ {{Ab_ex_b3_m1}}
+ 
   # Amount (nmol) of drug in tumor extracellular space
   d/dt(Drug_ex_f) <- (Drug_C1_f - Drug_ex_f / (V_tumor * E_Drug)) * V_tumor * (2 * P_Drug * R_Cap / R_Krogh^2 + 6 * D_Drug / R_Tumor^2) 
                     + K_Drug_ex_out * Drug_cell_cyto_f * NC_Tumor * SF 
                     - K_Drug_ex_in * NC_Tumor * (V_cell / (V_tumor * E_Drug)) * Drug_ex_f 
                     + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Drug_cell_cyto_f + Drug_cell_cyto_b_dt + Drug_cell_lyso_f) * SF
  
+  # Amount (nmol) of Metabolite1 in tumor extracellular space
+  d/dt(Meta1_ex_f) <- (Meta1_C1_f - Meta1_ex_f / (V_tumor * E_Meta)) * V_tumor * (2 * P_Meta * R_Cap / R_Krogh^2 + 6 * D_Meta / R_Tumor^2) 
+                    + K_Meta_ex_out * Meta1_cell_cyto_f * NC_Tumor * SF 
+                    - K_Meta_ex_in * NC_Tumor * (V_cell / (V_tumor * E_Meta)) * Meta1_ex_f 
+                    + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Meta1_cell_cyto_f + Meta1_cell_lyso_f) * SF
+                    + K_Drug_ex_met * Drug_ex_f
+ 
+  # Amount (nmol) of Metabolite2 in tumor extracellular space
+  d/dt(Meta2_ex_f) <- (Meta2_C1_f - Meta2_ex_f / (V_tumor * E_Meta)) * V_tumor * (2 * P_Meta * R_Cap / R_Krogh^2 + 6 * D_Meta / R_Tumor^2) 
+                    + K_Meta_ex_out * Meta2_cell_cyto_f * NC_Tumor * SF 
+                    - K_Meta_ex_in * NC_Tumor * (V_cell / (V_tumor * E_Meta)) * Meta2_ex_f 
+                    + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Meta2_cell_cyto_f + Meta2_cell_cyto_b_dt + Meta2_cell_lyso_f) * SF
+                    + K_Drug_ex_met * Drug_ex_f
+ 
   # Number of free Antibody (bound to 0 Protacs) molecules bound to binding target on a single tumor cell
-  d/dt(Ab_cell_f_b_ag) <- K_Ab_cell_ag_on * Ab_ex_f / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - ({{Ab_ex_f}})) 
+  d/dt(Ab_cell_f_b_ag) <- K_Ab_cell_ag_on * Ab_ex_f / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - ({{Ab_ex_f}}) - ({{Ab_ex_f_combi1}}) - ({{Ab_ex_f_combi2}}) - {{Ab_ex_f_combi3}}) 
                           - K_Ab_cell_ag_off * Ab_cell_f_b_ag 
                           - K_Ab_cell_int * Ab_cell_f_b_ag 
                           - log(2) / DT_tumor * Ab_cell_f_b_ag 
                           - K_Ab_Drug_on * max * Ab_cell_f_b_ag * Drug_ex_f / V_tumor
                           + K_Ab_Drug_off * Ab_cell_b1_b_ag 
+                          - K_Ab_Meta_on * max * Ab_cell_f_b_ag * Meta1_ex_f / V_tumor 
+                          + K_Ab_Meta_off * Ab_cell_m1_b_ag 
  
   # Number of Antibody molecules bound to 1 Protac bound to binding target on a single tumor cell
-  d/dt(Ab_cell_b1_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - ({{Ab_ex_f}})) 
+  d/dt(Ab_cell_b1_b_ag) <- K_Ab_cell_ag_on * Ab_ex_b1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - ({{Ab_ex_f}}) - ({{Ab_ex_f_combi1}}) - ({{Ab_ex_f_combi2}}) - {{Ab_ex_f_combi3}}) 
                           - K_Ab_cell_ag_off * Ab_cell_b1_b_ag 
                           - K_Ab_cell_int * Ab_cell_b1_b_ag 
                           - log(2) / DT_tumor * Ab_cell_b1_b_ag 
@@ -700,28 +1474,90 @@ d/dt(Ab_cell_lyso_b", 1:max, ") <- K_Ab_cell_int * Ab_cell_b", 1:max, "_b_ag
  {{Ab_cell_b3_b_ag}}
  {{Ab_cell_b4_b_ag}}
  
+  # Number of Antibody molecules bound to 1 Metabolite1 bound to binding target on a single tumor cell
+  d/dt(Ab_cell_m1_b_ag) <- K_Ab_cell_ag_on * Ab_ex_m1 / E_Ab * (Ag_cell_t - Ab_cell_f_b_ag - Ab_cell_b1_b_ag - Ab_cell_m1_b_ag 
+                        - ({{Ab_ex_f}}) - ({{Ab_ex_f_combi1}}) - ({{Ab_ex_f_combi2}}) - {{Ab_ex_f_combi3}}) 
+                          - K_Ab_cell_ag_off * Ab_cell_m1_b_ag 
+                          - K_Ab_cell_int * Ab_cell_m1_b_ag 
+                          - log(2) / DT_tumor * Ab_cell_m1_b_ag 
+                          + K_Ab_Meta_on * max * Ab_cell_f_b_ag * Meta1_ex_f / V_tumor
+                          - K_Ab_Meta_off * Ab_cell_m1_b_ag 
+                          {{Ab_cell_m1KD}}
+ 
+ {{Ab_cell_m2_b_ag}}
+ {{Ab_cell_m3_b_ag}}
+ {{Ab_cell_m4_b_ag}}
+ {{Ab_cell_b1_m1_b_ag}}
+ {{Ab_cell_b1_m2_b_ag}}
+ {{Ab_cell_b2_m1_b_ag}}
+ {{Ab_cell_b1_m3_b_ag}}
+ {{Ab_cell_b2_m2_b_ag}}
+ {{Ab_cell_b3_m1_b_ag}}
+ 
  {{Ab_cell_lyso_bi}}
+ {{Ab_cell_lyso_mj}}
+ {{Ab_cell_lyso_b1_mj}}
+ {{Ab_cell_lyso_b2_mj}}
+ {{Ab_cell_lyso_b3_m1}}
 
   # Number of unbound (free) drug molecules in lysosomal space on a single tumor cell
   d/dt(Drug_cell_lyso_f) <- - K_Drug_lyso_out * (V_cell / V_cell_lyso) * Drug_cell_lyso_f 
                             + K_Drug_lyso_in * Drug_cell_cyto_f 
                             - log(2) / DT_tumor * Drug_cell_lyso_f
+                            - K_Drug_cell_met * Drug_cell_lyso_f
                             + {{Drug_cell_lyso_f}}
+ 
+  # Number of unbound (free) Metabolite1 molecules in lysosomal space on a single tumor cell
+  d/dt(Meta1_cell_lyso_f) <- - K_Meta_lyso_out * (V_cell / V_cell_lyso) * Meta1_cell_lyso_f 
+                              + K_Meta_lyso_in * Meta1_cell_cyto_f 
+                              - log(2) / DT_tumor * Meta1_cell_lyso_f
+                              + K_Drug_cell_met * Drug_cell_lyso_f
+                              + {{Meta1_cell_lyso_f}}
+ 
+  # Number of unbound (free) Metabolite2 molecules in lysosomal space on a single tumor cell
+  d/dt(Meta2_cell_lyso_f) <- - K_Meta_lyso_out * (V_cell / V_cell_lyso) * Meta2_cell_lyso_f 
+                              + K_Meta_lyso_in * Meta2_cell_cyto_f 
+                              - log(2) / DT_tumor * Meta2_cell_lyso_f
+                              + K_Drug_cell_met * Drug_cell_lyso_f
  
   # Number of unbound (free) drug molecules in cytosol on a single tumor cell
   d/dt(Drug_cell_cyto_f) <- K_Drug_lyso_out * (V_cell / V_cell_lyso) * Drug_cell_lyso_f 
                             - K_Drug_lyso_in * Drug_cell_cyto_f 
                             - K_Drug_ex_out * Drug_cell_cyto_f 
-                            - K_Drug_cyto_dt_on * SF / V_cell * Drug_cell_cyto_f * (DrugTarget_cell_cyto_t * V_cell / SF - Drug_cell_cyto_b_dt) 
+                            - K_Drug_cyto_dt_on * SF / V_cell * Drug_cell_cyto_f * (DrugTarget_cell_cyto_t * V_cell / SF - Drug_cell_cyto_b_dt - Meta2_cell_cyto_b_dt) 
                             - K_Drug_met * Drug_cell_cyto_f 
                             + K_Drug_cyto_dt_off * Drug_cell_cyto_b_dt 
                             + K_Drug_ex_in * (V_cell / (V_tumor * E_Drug)) * (Drug_ex_f / SF) 
                             - log(2) / DT_tumor * Drug_cell_cyto_f
+                            - K_Drug_cell_met * Drug_cell_cyto_f
+ 
+  # Number of unbound (free) Metabolite1 molecules in cytosol on a single tumor cell
+  d/dt(Meta1_cell_cyto_f) <- K_Meta_lyso_out * (V_cell / V_cell_lyso) * Meta1_cell_lyso_f 
+                            - K_Meta_lyso_in * Meta1_cell_cyto_f 
+                            - K_Meta_ex_out * Meta1_cell_cyto_f 
+                            + K_Meta_ex_in * (V_cell / (V_tumor * E_Meta)) * (Meta1_ex_f / SF) 
+                            - log(2) / DT_tumor * Meta1_cell_cyto_f
+                            + K_Drug_cell_met * Drug_cell_cyto_f
+ 
+   # Number of unbound (free) Metabolite2 molecules in cytosol on a single tumor cell
+  d/dt(Meta2_cell_cyto_f) <- K_Meta_lyso_out * (V_cell / V_cell_lyso) * Meta2_cell_lyso_f 
+                            - K_Meta_lyso_in * Meta2_cell_cyto_f 
+                            - K_Meta_ex_out * Meta2_cell_cyto_f 
+                            - K_Meta_cyto_dt_on * SF / V_cell * Meta2_cell_cyto_f * (DrugTarget_cell_cyto_t * V_cell / SF - Drug_cell_cyto_b_dt - Meta2_cell_cyto_b_dt) 
+                            + K_Meta_cyto_dt_off * Meta2_cell_cyto_b_dt 
+                            + K_Meta_ex_in * (V_cell / (V_tumor * E_Meta)) * (Meta2_ex_f / SF) 
+                            - log(2) / DT_tumor * Meta2_cell_cyto_f
+                            + K_Drug_cell_met * Drug_cell_cyto_f
  
   # Number of target-bound drug molecules in cytosol on a single tumor cell
-  d/dt(Drug_cell_cyto_b_dt) <- K_Drug_cyto_dt_on * SF / V_cell * Drug_cell_cyto_f * (DrugTarget_cell_cyto_t * V_cell / SF - Drug_cell_cyto_b_dt) 
+  d/dt(Drug_cell_cyto_b_dt) <- K_Drug_cyto_dt_on * SF / V_cell * Drug_cell_cyto_f * (DrugTarget_cell_cyto_t * V_cell / SF - Drug_cell_cyto_b_dt - Meta2_cell_cyto_b_dt) 
                               - K_Drug_cyto_dt_off * Drug_cell_cyto_b_dt 
                               - log(2) / DT_tumor * Drug_cell_cyto_b_dt
+ 
+  # Number of target-bound Metabolite2 molecules in cytosol on a single tumor cell
+  d/dt(Meta2_cell_cyto_b_dt) <- K_Meta_cyto_dt_on * SF / V_cell * Meta2_cell_cyto_f * (DrugTarget_cell_cyto_t * V_cell / SF - Drug_cell_cyto_b_dt - Meta2_cell_cyto_b_dt) 
+                              - K_Meta_cyto_dt_off * Meta2_cell_cyto_b_dt 
+                              - log(2) / DT_tumor * Meta2_cell_cyto_b_dt
  
   # Logistic killing function from Thomas Rysiok ------------------------------
   ########################

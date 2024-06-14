@@ -77,6 +77,9 @@ ui <- shinyUI(dashboardPage(
                           <a href=\"logistic_pk_pd_equations_explained.pptx\" target=\"_blank\">PPTX</a>
                           <a href=\"logistic_pk_pd_equations_explained.pdf\" target=\"_blank\">PDF</a><br>")
           ),
+          splitLayout(
+            cellWidths = c("50%", "50%"),
+            div(
           numericInput("maxTime", "Max t (days)", value = 52),
           selectInput("doseTo", "Dose of which PROxAb:",
                       list(
@@ -84,14 +87,20 @@ ui <- shinyUI(dashboardPage(
                       ),
                       selected = "Ab_C1_b1"
           ),
-          "bx <= max. number of bound protacs per antibody",
+          "bx <= max. number of bound protacs per Ab",
           numericInput("dose", "Dose (mg/kg)", value = 2),
-          numericInput("doseDrug", "Additional dose of free Protac Drug_C1_f (mg/kg)", value = 0),
-          "Dose converted to nmol/kg or nM with corresponding MW. Same dosing scheme for free Protac and Shuttle.", br(),
+          numericInput("doseDrug", "Extra dose of free Protac Drug_C1_f (mg/kg)", value = 0),
+          "Dose converted to nmol/kg or nM with corresponding MW", br(),
+          "Same dosing scheme for free Protac and Shuttle", 
+            ),
+          div(
           numericInput("doseT", "Dose given every x day", value = 0),
           numericInput("doseMaxT", "For a total number of times of (1 + x)", value = 0),
           numericInput("startT", "Dosing start time (h)", value = 0), 
-          numericInput("max", "Maximum number of bound protacs per antibody (min=1 and max=4)", value = 4), 
+          numericInput("max", "Max. number of bound protacs per antibody", value = 4),
+          "min=1 and max=4"
+          )
+          ),
           br(),
           actionButton("update", "Calculate and plot"), br(), br(),
           tabsetPanel(
@@ -120,7 +129,9 @@ ui <- shinyUI(dashboardPage(
             tabsetPanel(
               tabPanel(
                 "Plots",
-                plotlyOutput(outputId = "plot1", width = 600 * 1, height = 450 * 0.8)
+                plotlyOutput(outputId = "plotPlasma", width = 600 * 1, height = 450 * 0.8),
+                plotlyOutput(outputId = "plotCell", width = 600 * 1, height = 450 * 0.8),
+                plotlyOutput(outputId = "plotTV", width = 600 * 1, height = 450 * 0.8)
               ),
               tabPanel("Points", dataTableOutput("resultTable")),
               tabPanel("Fitting Experimental Data",
@@ -129,7 +140,7 @@ ui <- shinyUI(dashboardPage(
                                           choiceNames =
                                             list(
                                               HTML(paste0("EC50")),
-                                              HTML(paste0("Ag", tags$sup("Ex"))),
+                                              HTML(paste0("Ag", tags$sup("cell"), tags$sub("t"))),
                                               HTML(paste0("tau"))
                                             ),
                                           inline = TRUE,

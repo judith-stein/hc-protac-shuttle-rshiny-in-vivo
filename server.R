@@ -342,9 +342,27 @@ server <- function(input, output, session) {
   ############### Plots feature ----------------
   #
 
-  output$plot1 <- renderPlotly({
-    show <- c("legendonly", rep(T, 5), rep("legendonly", 16))
-    MakePlot1(RunSim()$numericalSolution, show, "Plasma PK")
+  output$plotPlasma <- renderPlotly({
+    show <- c("legendonly", T, "legendonly", rep(T, 3), "legendonly", T, rep("legendonly", 17))
+    input$update
+    isolate({
+      MakePlot1(RunSim()$numericalSolution, show, "Plasma PK", input$max)
+    })
+  })
+  
+  output$plotCell <- renderPlotly({
+    input$update
+    isolate({
+      MakePlot2(RunSim()$numericalSolution, "Number of molecules in a single tumor cell", input$max)
+    })
+  })
+  
+  output$plotTV <- renderPlotly({
+    show <- c(T, rep("legendonly", 4), rep(T, 4))
+    input$update
+    isolate({
+      MakePlot3(RunSim()$numericalSolution, show, "Tumor volume", input$max)
+    })
   })
   
   output$plotExpData <- renderPlotly({
@@ -358,7 +376,7 @@ server <- function(input, output, session) {
   
   output$resultTable <- renderDataTable({
     result <- RunSim()$numericalSolution
-    result <- result[ , !names(result) %in% c("Ab_C1_f", "Ab_C2_f", "EC50", "Ag_cell_t", "ADC_ex_f_E_ADC")]
+    # result <- result[ , !names(result) %in% c("Ab_C1_f", "Ab_C2_f", "EC50", "Ag_cell_t", "ADC_ex_f_E_ADC")]
     custom_formatted_results <- FormatSimRawDataForOutput(result)
     custom_formatted_results
   })

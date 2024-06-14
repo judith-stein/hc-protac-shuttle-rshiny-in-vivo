@@ -124,7 +124,7 @@ SimThis <- function(input, conditions, parameters) {
   }
   
   #################################### Fitting end
-  
+
   # writeLines(BuildModelForN(max = input$max), "model.txt")
   Model <<- rxode2(BuildModelForN(max = input$max))
   
@@ -152,24 +152,147 @@ SimThis <- function(input, conditions, parameters) {
 #################### Plots ---------------------
 #
 
-MakePlot1 <- function(simData, vis, title) {
+# Plasma and rest
+MakePlot1 <- function(simData, vis, title, max) {
   mfigure <- plot_ly(simData, x = ~ time / 24, y = ~V_tumor_mm3, name = "V_tumor (mm^3)", type = "scatter", mode = "lines", visible = vis[1]) %>%
-    add_trace(y = ~Ab_C1_f_nM, name = "Ab_C1_f (nM)", mode = "lines", visible = vis[2]) %>%
-    add_trace(y = ~Ab_C2_f_nM, name = "Ab_C2_f (nM)", mode = "lines", visible = vis[3]) %>%
+    add_trace(y = ~Ab_C1_f_nM, name = "Ab_C1_f (nM)", mode = "lines", visible = vis[2]) 
+  for (i in 1:max) {
+    mfigure <- mfigure %>%
+      add_trace(y = as.formula(paste0("~Ab_C1_b", i)), name = paste0("Ab_C1_b", i, " (nmol/kg)"), mode = "lines", visible = "legendonly") %>%
+      add_trace(y = as.formula(paste0("~Ab_C1_m", i)), name = paste0("Ab_C1_m", i, " (nmol/kg)"), mode = "lines", visible = "legendonly") 
+    if (max > 1 && i < max) {
+      for (j in 1:(max-i)) {
+        mfigure <- mfigure %>%
+          add_trace(y = as.formula(paste0("~Ab_C1_b", i, "_m", j)), name = paste0("Ab_C1_b", i, "_m", j, " (nmol/kg)"), mode = "lines", visible = "legendonly") 
+      }
+    }
+  }
+  mfigure <- mfigure %>%
+    add_trace(y = ~Ab_C2_f_nM, name = "Ab_C2_f (nM)", mode = "lines", visible = vis[3]) 
+  for (i in 1:max) {
+    mfigure <- mfigure %>%
+      add_trace(y = as.formula(paste0("~Ab_C2_b", i)), name = paste0("Ab_C2_b", i, " (nmol/kg)"), mode = "lines", visible = "legendonly") %>%
+      add_trace(y = as.formula(paste0("~Ab_C2_m", i)), name = paste0("Ab_C2_m", i, " (nmol/kg)"), mode = "lines", visible = "legendonly") 
+    if (max > 1 && i < max) {
+      for (j in 1:(max-i)) {
+        mfigure <- mfigure %>%
+          add_trace(y = as.formula(paste0("~Ab_C2_b", i, "_m", j)), name = paste0("Ab_C2_b", i, "_m", j, " (nmol/kg)"), mode = "lines", visible = "legendonly") 
+      }
+    }
+  }
+  mfigure <- mfigure %>%
     add_trace(y = ~Drug_C1_f, name = "Drug_C1_f (nM)", mode = "lines", visible = vis[4]) %>%
-    add_trace(y = ~Drug_C2_f, name = "Drug_C2_f (nM)", mode = "lines", visible = vis[5]) %>%
-    add_trace(y = ~Drug_C1_b_ntp, name = "Drug_C1_b_ntp (nM)", mode = "lines", visible = vis[6]) %>%
-    add_trace(y = ~Ab_ex_f, name = "ADC_ex_f (nM)", mode = "lines", visible = vis[8]) %>%
-    add_trace(y = ~Drug_ex_f, name = "Drug_ex_f (nmol)", mode = "lines", visible = vis[9]) %>%
-    add_trace(y = ~Ab_cell_f_b_ag, name = "ADC_cell_b_ag", mode = "lines", visible = vis[10]) %>%
-    add_trace(y = ~Ab_cell_lyso_b1, name = "ADC_cell_lyso_b1", mode = "lines", visible = vis[11]) %>%
-    add_trace(y = ~Drug_cell_lyso_f, name = "Drug_cell_lyso_f", mode = "lines", visible = vis[12]) %>%
-    add_trace(y = ~Drug_cell_cyto_f, name = "Drug_cell_cyto_f", mode = "lines", visible = vis[13]) %>%
-    add_trace(y = ~Drug_cell_cyto_b_dt, name = "Drug_cell_cyto_b_dt", mode = "lines", visible = vis[14]) %>%
-    add_trace(y = ~V_tumor_pro_mm3, name = "V_tumor_pro_mm3", mode = "lines", visible = vis[15]) %>%
-    add_trace(y = ~V_tumor_dyi_1_mm3, name = "V_tumor_dyi_1_mm3", mode = "lines", visible = vis[16]) %>%
-    add_trace(y = ~V_tumor_dyi_2_mm3, name = "V_tumor_dyi_2_mm3", mode = "lines", visible = vis[17]) %>%
-    add_trace(y = ~V_tumor_dyi_3_mm3, name = "V_tumor_dyi_3_mm3", mode = "lines", visible = vis[18]) %>%
+    add_trace(y = ~Meta1_C1_f, name = "Meta1_C1_f (nM)", mode = "lines", visible = vis[5]) %>%
+    add_trace(y = ~Meta2_C1_f, name = "Meta2_C1_f (nM)", mode = "lines", visible = vis[6]) %>%
+    add_trace(y = ~Drug_C2_f, name = "Drug_C2_f (nM)", mode = "lines", visible = vis[7]) %>%
+    add_trace(y = ~Drug_C1_b_ntp, name = "Drug_C1_b_ntp (nM)", mode = "lines", visible = vis[8]) %>%
+    add_trace(y = ~Ab_ex_f, name = "Ab_ex_f (nM)", mode = "lines", visible = vis[9]) 
+  for (i in 1:max) {
+    mfigure <- mfigure %>%
+      add_trace(y = as.formula(paste0("~Ab_ex_b", i)), name = paste0("Ab_ex_b", i, " (nM)"), mode = "lines", visible = "legendonly") %>%
+      add_trace(y = as.formula(paste0("~Ab_ex_m", i)), name = paste0("Ab_ex_m", i, " (nM)"), mode = "lines", visible = "legendonly") 
+    if (max > 1 && i < max) {
+      for (j in 1:(max-i)) {
+        mfigure <- mfigure %>%
+          add_trace(y = as.formula(paste0("~Ab_ex_b", i, "_m", j)), name = paste0("Ab_ex_b", i, "_m", j, " (nM)"), mode = "lines", visible = "legendonly") 
+      }
+    }
+  }
+  mfigure <- mfigure %>%
+    add_trace(y = ~Drug_ex_f, name = "Drug_ex_f (nmol)", mode = "lines", visible = vis[10]) %>%
+    add_trace(y = ~Meta1_ex_f, name = "Meta1_ex_f (nmol)", mode = "lines", visible = vis[11]) %>%
+    add_trace(y = ~Meta2_ex_f, name = "Meta2_ex_f (nmol)", mode = "lines", visible = vis[12]) %>%
+    add_trace(y = ~Ab_cell_f_b_ag, name = "Ab_cell_f_b_ag", mode = "lines", visible = vis[13]) 
+  for (i in 1:max) {
+    mfigure <- mfigure %>%
+      add_trace(y = as.formula(paste0("~Ab_cell_b", i, "_b_ag")), name = paste0("Ab_cell_b", i, "_b_ag"), mode = "lines", visible = "legendonly") %>%
+      add_trace(y = as.formula(paste0("~Ab_cell_m", i, "_b_ag")), name = paste0("Ab_cell_m", i, "_b_ag"), mode = "lines", visible = "legendonly") 
+    if (max > 1 && i < max) {
+      for (j in 1:(max-i)) {
+        mfigure <- mfigure %>%
+          add_trace(y = as.formula(paste0("~Ab_cell_b", i, "_m", j, "_b_ag")), name = paste0("Ab_cell_b", i, "_m", j, "_b_ag"), mode = "lines", visible = "legendonly") 
+      }
+    }
+  }
+  mfigure <- mfigure %>%
+    add_trace(y = ~Drug_cell_lyso_f, name = "Drug_cell_lyso_f", mode = "lines", visible = vis[14]) %>%
+    add_trace(y = ~Meta1_cell_lyso_f, name = "Meta1_cell_lyso_f", mode = "lines", visible = vis[15]) %>%
+    add_trace(y = ~Meta2_cell_lyso_f, name = "Meta2_cell_lyso_f", mode = "lines", visible = vis[16]) %>%
+    add_trace(y = ~Drug_cell_cyto_f, name = "Drug_cell_cyto_f", mode = "lines", visible = vis[17]) %>%
+    add_trace(y = ~Meta1_cell_cyto_f, name = "Meta1_cell_cyto_f", mode = "lines", visible = vis[18]) %>%
+    add_trace(y = ~Meta2_cell_cyto_f, name = "Meta2_cell_cyto_f", mode = "lines", visible = vis[10]) %>%
+    add_trace(y = ~Drug_cell_cyto_b_dt, name = "Drug_cell_cyto_b_dt", mode = "lines", visible = vis[20]) %>%
+    add_trace(y = ~Meta2_cell_cyto_b_dt, name = "Meta2_cell_cyto_b_dt", mode = "lines", visible = vis[21]) %>%
+    add_trace(y = ~V_tumor_pro_mm3, name = "V_tumor_pro_mm3", mode = "lines", visible = vis[22]) %>%
+    add_trace(y = ~V_tumor_dyi_1_mm3, name = "V_tumor_dyi_1_mm3", mode = "lines", visible = vis[23]) %>%
+    add_trace(y = ~V_tumor_dyi_2_mm3, name = "V_tumor_dyi_2_mm3", mode = "lines", visible = vis[24]) %>%
+    add_trace(y = ~V_tumor_dyi_3_mm3, name = "V_tumor_dyi_3_mm3", mode = "lines", visible = vis[25]) %>%
+    layout(
+      margin = list(t = 50), title = title,
+      xaxis = list(title = "Time (days)"),
+      yaxis = list(title = "Simulation")
+    ) %>%
+    config(displaylogo = FALSE, toImageButtonOptions = list(format = "png")) # To hide the link
+  
+  return(mfigure)
+}
+
+# Tumor cell
+MakePlot2 <- function(simData, title, max) {
+  mfigure <- plot_ly(simData, x = ~ time / 24, y = ~Ab_cell_f_b_ag, name = "Ab_cell_f_b_ag", type = "scatter", mode = "lines") 
+  for (i in 1:max) {
+    mfigure <- mfigure %>%
+      add_trace(y = as.formula(paste0("~Ab_cell_b", i, "_b_ag")), name = paste0("Ab_cell_b", i, "_b_ag"), mode = "lines", visible = "legendonly") %>%
+      add_trace(y = as.formula(paste0("~Ab_cell_m", i, "_b_ag")), name = paste0("Ab_cell_m", i, "_b_ag"), mode = "lines", visible = "legendonly") 
+    if (max > 1 && i < max) {
+      for (j in 1:(max-i)) {
+        mfigure <- mfigure %>%
+          add_trace(y = as.formula(paste0("~Ab_cell_b", i, "_m", j, "_b_ag")), name = paste0("Ab_cell_b", i, "_m", j, "_b_ag"), mode = "lines", visible = "legendonly") 
+      }
+    }
+  }
+  mfigure <- mfigure %>%
+    add_trace(y = ~Drug_cell_lyso_f, name = "Drug_cell_lyso_f", mode = "lines") %>%
+    add_trace(y = ~Meta1_cell_lyso_f, name = "Meta1_cell_lyso_f", mode = "lines") %>%
+    add_trace(y = ~Meta2_cell_lyso_f, name = "Meta2_cell_lyso_f", mode = "lines") %>%
+    add_trace(y = ~Drug_cell_cyto_f, name = "Drug_cell_cyto_f", mode = "lines") %>%
+    add_trace(y = ~Meta1_cell_cyto_f, name = "Meta1_cell_cyto_f", mode = "lines") %>%
+    add_trace(y = ~Meta2_cell_cyto_f, name = "Meta2_cell_cyto_f", mode = "lines") %>%
+    add_trace(y = ~Drug_cell_cyto_b_dt, name = "Drug_cell_cyto_b_dt", mode = "lines") %>%
+    add_trace(y = ~Meta2_cell_cyto_b_dt, name = "Meta2_cell_cyto_b_dt", mode = "lines") %>%
+    layout(
+      margin = list(t = 50), title = title,
+      xaxis = list(title = "Time (days)"),
+      yaxis = list(title = "Simulation")
+    ) %>%
+    config(displaylogo = FALSE, toImageButtonOptions = list(format = "png")) # To hide the link
+  
+  return(mfigure)
+}
+
+# Tumor volume
+MakePlot3 <- function(simData, vis, title, max) {
+  mfigure <- plot_ly(simData, x = ~ time / 24, y = ~V_tumor_mm3, name = "V_tumor (mm^3)", type = "scatter", mode = "lines", visible = vis[1]) %>%
+    add_trace(y = ~Ab_ex_f, name = "Ab_ex_f (nM)", mode = "lines", visible = vis[2]) 
+  for (i in 1:max) {
+    mfigure <- mfigure %>%
+      add_trace(y = as.formula(paste0("~Ab_ex_b", i)), name = paste0("Ab_ex_b", i, " (nM)"), mode = "lines", visible = "legendonly") %>%
+      add_trace(y = as.formula(paste0("~Ab_ex_m", i)), name = paste0("Ab_ex_m", i, " (nM)"), mode = "lines", visible = "legendonly") 
+    if (max > 1 && i < max) {
+      for (j in 1:(max-i)) {
+        mfigure <- mfigure %>%
+          add_trace(y = as.formula(paste0("~Ab_ex_b", i, "_m", j)), name = paste0("Ab_ex_b", i, "_m", j, " (nM)"), mode = "lines", visible = "legendonly") 
+      }
+    }
+  }
+  mfigure <- mfigure %>%
+    add_trace(y = ~Drug_ex_f, name = "Drug_ex_f (nmol)", mode = "lines", visible = vis[3]) %>%
+    add_trace(y = ~Meta1_ex_f, name = "Meta1_ex_f (nmol)", mode = "lines", visible = vis[4]) %>%
+    add_trace(y = ~Meta2_ex_f, name = "Meta2_ex_f (nmol)", mode = "lines", visible = vis[5]) %>%
+    add_trace(y = ~V_tumor_pro_mm3, name = "V_tumor_pro_mm3", mode = "lines", visible = vis[6]) %>%
+    add_trace(y = ~V_tumor_dyi_1_mm3, name = "V_tumor_dyi_1_mm3", mode = "lines", visible = vis[7]) %>%
+    add_trace(y = ~V_tumor_dyi_2_mm3, name = "V_tumor_dyi_2_mm3", mode = "lines", visible = vis[8]) %>%
+    add_trace(y = ~V_tumor_dyi_3_mm3, name = "V_tumor_dyi_3_mm3", mode = "lines", visible = vis[9]) %>%
     layout(
       margin = list(t = 50), title = title,
       xaxis = list(title = "Time (days)"),
