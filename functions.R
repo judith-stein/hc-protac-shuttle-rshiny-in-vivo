@@ -642,6 +642,18 @@ d/dt(Ab_C2_b4) <- (CLD_Ab / V_C1_Ab) * Ab_C1_b4
                        paste0("(CL_Ab * ((", Drug_C1_b,") + (", Drug_C1_combi1, ") + (", Drug_C1_combi2, ") * 2 + ", Drug_C1_combi3, " * 3) / V_C1_Ab) / V_C1_Drug"), 
                        paste0(""))
   
+  Drug_C1_fKD <- ifelse(max >= 2, 
+                           paste0("K_Ab_Drug_on * (max - ", 1:(max-1), ") * Ab_C1_b", 1:(max-1), " / V_C1_Drug * Drug_C1_f + K_Ab_Drug_off * Ab_C1_b", 2:max, " / V_C1_Drug
+                                  - K_Ab_Drug_on * (max - ", 1:(max-1), ") * Ab_C1_m", 1:(max-1), " / V_C1_Drug * Drug_C1_f + K_Ab_Drug_off * Ab_C1_b1_m", 1:(max-1), " / V_C1_Drug", collapse=" - "), 
+                           paste0("0"))
+  Drug_C1_fKD2 <- ifelse(max >= 3, 
+                        paste0("K_Ab_Drug_on * (max - 2) * Ab_C1_b1_m1 / V_C1_Drug * Drug_C1_f + K_Ab_Drug_off * Ab_C1_b2_m1 / V_C1_Drug"), 
+                        paste0("0"))
+  Drug_C1_fKD3 <- ifelse(max == 4, 
+                        paste0("K_Ab_Drug_on * (max - 3) * Ab_C1_b1_m2 / V_C1_Drug * Drug_C1_f + K_Ab_Drug_off * Ab_C1_b2_m2 / V_C1_Drug
+                               - K_Ab_Drug_on * (max - 3) * Ab_C1_b2_m1 / V_C1_Drug * Drug_C1_f + K_Ab_Drug_off * Ab_C1_b3_m1 / V_C1_Drug"), 
+                        paste0("0"))
+  
   Drug_C1_m <- ifelse(max >= 1, 
                       paste0("Ab_C1_m", 1:max, " * ", 1:max, collapse=" + "), 
                       paste0("0"))
@@ -655,6 +667,18 @@ d/dt(Ab_C2_b4) <- (CLD_Ab / V_C1_Ab) * Ab_C1_b4
   Meta1_C1_f <- ifelse(max >= 1, 
                       paste0("(CL_Ab * ((", Drug_C1_m,") + (", Meta1_C1_f_combi1, ") + (", Meta1_C1_f_combi2, ") + ", Drug_C1_combi3, ") / V_C1_Ab) / V_C1_Meta"), 
                       paste0(""))
+  
+  Meta1_C1_fKD <- ifelse(max >= 2, 
+                        paste0("K_Ab_Meta_on * (max - ", 1:(max-1), ") * Ab_C1_b", 1:(max-1), " / V_C1_Meta * Meta1_C1_f + K_Ab_Meta_off * Ab_C1_b", 1:(max-1), "_m1 / V_C1_Meta
+                                  - K_Ab_Meta_on * (max - ", 1:(max-1), ") * Ab_C1_m", 1:(max-1), " / V_C1_Meta * Meta1_C1_f + K_Ab_Meta_off * Ab_C1_m", 2:max, " / V_C1_Meta", collapse=" - "), 
+                        paste0("0"))
+  Meta1_C1_fKD2 <- ifelse(max >= 3, 
+                         paste0("K_Ab_Meta_on * (max - 2) * Ab_C1_b1_m1 / V_C1_Meta * Meta1_C1_f + K_Ab_Meta_off * Ab_C1_b1_m2 / V_C1_Meta"), 
+                         paste0("0"))
+  Meta1_C1_fKD3 <- ifelse(max == 4, 
+                         paste0("K_Ab_Meta_on * (max - 3) * Ab_C1_b1_m2 / V_C1_Meta * Meta1_C1_f + K_Ab_Meta_off * Ab_C1_b1_m3 / V_C1_Meta
+                               - K_Ab_Meta_on * (max - 3) * Ab_C1_b2_m1 / V_C1_Meta * Meta1_C1_f + K_Ab_Meta_off * Ab_C1_b2_m2 / V_C1_Meta"), 
+                         paste0("0"))
   
   Ab_C2_m2KD <- ifelse(max > 2, 
                        paste0(" - K_Ab_Drug_on * (max - 2) * Ab_C2_m2 * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b1_m2
@@ -755,6 +779,18 @@ d/dt(Ab_C2_b3_m1) <- (CLD_Ab / V_C1_Ab) * Ab_C1_b3_m1
                   - K_Ab_Drug_off * Ab_C2_b3_m1
                   "), 
 paste0(""))
+  
+  Drug_C2_fKD <- ifelse(max >= 2, 
+                        paste0("K_Ab_Drug_on * (max - ", 1:(max-1), ") * Ab_C2_b", 1:(max-1), " / V_C2_Drug * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b", 2:max, " / V_C2_Drug
+                                  - K_Ab_Drug_on * (max - ", 1:(max-1), ") * Ab_C2_m", 1:(max-1), " / V_C2_Drug * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b1_m", 1:(max-1), " / V_C2_Drug", collapse=" - "), 
+                        paste0("0"))
+  Drug_C2_fKD2 <- ifelse(max >= 3, 
+                         paste0("K_Ab_Drug_on * (max - 2) * Ab_C2_b1_m1 / V_C2_Drug * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b2_m1 / V_C2_Drug"), 
+                         paste0("0"))
+  Drug_C2_fKD3 <- ifelse(max == 4, 
+                         paste0("K_Ab_Drug_on * (max - 3) * Ab_C2_b1_m2 / V_C2_Drug * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b2_m2 / V_C2_Drug
+                               - K_Ab_Drug_on * (max - 3) * Ab_C2_b2_m1 / V_C2_Drug * Drug_C2_f + K_Ab_Drug_off * Ab_C2_b3_m1 / V_C2_Drug"), 
+                         paste0("0"))
   
   Ab_ex_f_combi1 <- ifelse(max >= 2, 
                     paste0("Ab_cell_b1_m", 1:(max-1),"_b_ag", collapse=" + "), 
@@ -985,6 +1021,40 @@ d/dt(Ab_ex_b3_m1) <- (Ab_C1_b3_m1 / V_C1_Ab - Ab_ex_b3_m1 / E_Ab) * (2 * P_Ab * 
                     - K_Ab_Meta_off * Ab_ex_b3_m1 / E_Ab
                     "), 
 paste0(""))
+
+  Drug_ex_fKD <- ifelse(max >= 2, 
+                        paste0("K_Ab_Drug_on * (max - ", 1:(max-1), ") * Ab_ex_b", 1:(max-1), " / E_Ab * Drug_ex_f + K_Ab_Drug_off * Ab_ex_b", 2:max, " / E_Ab * V_tumor
+                                  - K_Ab_Drug_on * (max - ", 1:(max-1), ") * Ab_ex_m", 1:(max-1), " / E_Ab * Drug_ex_f + K_Ab_Drug_off * Ab_ex_b1_m", 1:(max-1), " / E_Ab * V_tumor
+                                  - K_Ab_Drug_on * (max - ", 1:(max-1), ") * Ab_cell_b", 1:(max-1), "_b_ag * NC_Tumor * Drug_ex_f / V_tumor * SF + K_Ab_Drug_off * Ab_cell_b", 2:max, "_b_ag * NC_Tumor * SF
+                                  - K_Ab_Drug_on * (max - ", 1:(max-1), ") * Ab_cell_m", 1:(max-1), "_b_ag * NC_Tumor * Drug_ex_f / V_tumor * SF + K_Ab_Drug_off * Ab_cell_b1_m", 1:(max-1), "_b_ag * NC_Tumor * SF", collapse=" - "), 
+                        paste0("0"))
+  Drug_ex_fKD2 <- ifelse(max >= 3, 
+                         paste0("K_Ab_Drug_on * (max - 2) * Ab_ex_b1_m1 / E_Ab * Drug_ex_f + K_Ab_Drug_off * Ab_ex_b2_m1 / E_Ab * V_tumor
+                                - K_Ab_Drug_on * (max - 2) * Ab_cell_b1_m1_b_ag * NC_Tumor * Drug_ex_f / V_tumor * SF + K_Ab_Drug_off * Ab_cell_b2_m1_b_ag * NC_Tumor * SF"), 
+                         paste0("0"))
+  Drug_ex_fKD3 <- ifelse(max == 4, 
+                         paste0("K_Ab_Drug_on * (max - 3) * Ab_ex_b1_m2 / E_Ab * Drug_ex_f + K_Ab_Drug_off * Ab_ex_b2_m2 / E_Ab * V_tumor
+                               - K_Ab_Drug_on * (max - 3) * Ab_ex_b2_m1 / E_Ab * Drug_ex_f + K_Ab_Drug_off * Ab_ex_b3_m1 / E_Ab * V_tumor
+                               - K_Ab_Drug_on * (max - 3) * Ab_cell_b1_m2_b_ag * NC_Tumor * Drug_ex_f / V_tumor * SF + K_Ab_Drug_off * Ab_cell_b2_m2_b_ag * NC_Tumor * SF
+                               - K_Ab_Drug_on * (max - 3) * Ab_cell_b2_m1_b_ag * NC_Tumor * Drug_ex_f / V_tumor * SF + K_Ab_Drug_off * Ab_cell_b3_m1_b_ag * NC_Tumor * SF"), 
+                         paste0("0"))
+  
+  Meta1_ex_fKD <- ifelse(max >= 2, 
+                        paste0("K_Ab_Meta_on * (max - ", 1:(max-1), ") * Ab_ex_b", 1:(max-1), " / E_Ab * Meta1_ex_f + K_Ab_Meta_off * Ab_ex_b", 2:max, " / E_Ab * V_tumor
+                                  - K_Ab_Meta_on * (max - ", 1:(max-1), ") * Ab_ex_m", 1:(max-1), " / E_Ab * Meta1_ex_f + K_Ab_Meta_off * Ab_ex_b1_m", 1:(max-1), " / E_Ab * V_tumor
+                                  - K_Ab_Meta_on * (max - ", 1:(max-1), ") * Ab_cell_b", 1:(max-1), "_b_ag * NC_Tumor * Meta1_ex_f / V_tumor * SF + K_Ab_Meta_off * Ab_cell_b", 2:max, "_b_ag * NC_Tumor * SF
+                                  - K_Ab_Meta_on * (max - ", 1:(max-1), ") * Ab_cell_m", 1:(max-1), "_b_ag * NC_Tumor * Meta1_ex_f / V_tumor * SF + K_Ab_Meta_off * Ab_cell_b1_m", 1:(max-1), "_b_ag * NC_Tumor * SF", collapse=" - "), 
+                        paste0("0"))
+  Meta1_ex_fKD2 <- ifelse(max >= 3, 
+                         paste0("K_Ab_Meta_on * (max - 2) * Ab_ex_b1_m1 / E_Ab * Meta1_ex_f + K_Ab_Meta_off * Ab_ex_b2_m1 / E_Ab * V_tumor
+                                - K_Ab_Meta_on * (max - 2) * Ab_cell_b1_m1_b_ag * NC_Tumor * Meta1_ex_f / V_tumor * SF + K_Ab_Meta_off * Ab_cell_b2_m1_b_ag * NC_Tumor * SF"), 
+                         paste0("0"))
+  Meta1_ex_fKD3 <- ifelse(max == 4, 
+                         paste0("K_Ab_Meta_on * (max - 3) * Ab_ex_b1_m2 / E_Ab * Meta1_ex_f + K_Ab_Meta_off * Ab_ex_b2_m2 / E_Ab * V_tumor
+                               - K_Ab_Meta_on * (max - 3) * Ab_ex_b2_m1 / E_Ab * Meta1_ex_f + K_Ab_Meta_off * Ab_ex_b3_m1 / E_Ab * V_tumor
+                               - K_Ab_Meta_on * (max - 3) * Ab_cell_b1_m2_b_ag * NC_Tumor * Meta1_ex_f / V_tumor * SF + K_Ab_Meta_off * Ab_cell_b2_m2_b_ag * NC_Tumor * SF
+                               - K_Ab_Meta_on * (max - 3) * Ab_cell_b2_m1_b_ag * NC_Tumor * Meta1_ex_f / V_tumor * SF + K_Ab_Meta_off * Ab_cell_b3_m1_b_ag * NC_Tumor * SF"), 
+                         paste0("0"))
   
   Ab_cell_b1KD <- ifelse(max >= 2, 
                        paste0(" - K_Ab_Drug_on * (max - 1) * Ab_cell_b1_b_ag * Drug_ex_f / V_tumor + K_Ab_Drug_off * Ab_cell_b2_b_ag
@@ -1328,6 +1398,11 @@ paste0(""))
                      - K_Drug_ex_ntp_on_off * (1 - f_ex_ub) * Drug_C1_f 
                      + K_Drug_ex_ntp_on_off * f_ex_ub * Drug_C1_b_ntp
                      - K_Drug_C1_met * Drug_C1_f
+                     - K_Ab_Drug_on * max * Ab_C1_f / V_C1_Drug * Drug_C1_f
+                     + K_Ab_Drug_off * Ab_C1_b1 / V_C1_Drug
+                     - {{Drug_C1_fKD}}
+                     - {{Drug_C1_fKD2}}
+                     - {{Drug_C1_fKD3}}
                      + {{Drug_C1_f}}
  
   # Concentration (nmol/l) of drug bound to unspecific protein in central compartment/plasma
@@ -1338,6 +1413,11 @@ paste0(""))
   d/dt(Meta1_C1_f) <- - CL_Meta / V_C1_Meta * Meta1_C1_f 
                      - (Meta1_C1_f - Meta1_ex_f / (V_tumor * E_Meta)) * V_tumor / (V_C1_Meta * BW) * (2 * P_Meta * R_Cap / R_Krogh^2 + 6 * D_Meta / R_Tumor^2)
                      + K_Drug_C1_met * Drug_C1_f
+                     - K_Ab_Meta_on * max * Ab_C1_f / V_C1_Meta * Meta1_C1_f
+                     + K_Ab_Meta_off * Ab_C1_m1 / V_C1_Meta
+                     - {{Meta1_C1_fKD}}
+                     - {{Meta1_C1_fKD2}}
+                     - {{Meta1_C1_fKD3}}
                      + {{Meta1_C1_f}}
  
   # Concentration (nmol/l) of free (unbound) Metabolite2 in central compartment/plasma
@@ -1380,6 +1460,11 @@ paste0(""))
   # Concentration (nmol/l) of drug in peripheral compartment
   d/dt(Drug_C2_f) <- CLD_Drug / V_C2_Drug * Drug_C1_f
                     - CLD_Drug / V_C2_Drug * Drug_C2_f
+                    - K_Ab_Drug_on * max * Ab_C2_f / V_C2_Drug * Drug_C2_f
+                    + K_Ab_Drug_off * Ab_C2_b1 / V_C2_Drug
+                    - {{Drug_C2_fKD}}
+                    - {{Drug_C2_fKD2}}
+                    - {{Drug_C2_fKD3}}
  
   # Concentration (nM) of free Antibody (bound to 0 Protacs) in tumor extracellular space
   d/dt(Ab_ex_f) <- (Ab_C1_f / V_C1_Ab - Ab_ex_f / E_Ab) * (2 * P_Ab * R_Cap / R_Krogh^2 + 6 * D_Ab / R_Tumor^2)
@@ -1434,6 +1519,13 @@ paste0(""))
                     + K_Drug_ex_out * Drug_cell_cyto_f * NC_Tumor * SF 
                     - K_Drug_ex_in * NC_Tumor * (V_cell / (V_tumor * E_Drug)) * Drug_ex_f 
                     + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Drug_cell_cyto_f + Drug_cell_cyto_b_dt + Drug_cell_lyso_f) * SF
+                    - K_Ab_Drug_on * max * Ab_ex_f / E_Ab * Drug_ex_f
+                    + K_Ab_Drug_off * Ab_ex_b1 / E_Ab * V_tumor
+                    - K_Ab_Drug_on * max * Ab_cell_f_b_ag * NC_Tumor * Drug_ex_f / V_tumor * SF
+                    + K_Ab_Drug_off * Ab_cell_b1_b_ag * NC_Tumor * SF
+                    - {{Drug_ex_fKD}}
+                    - {{Drug_ex_fKD2}}
+                    - {{Drug_ex_fKD3}}
  
   # Amount (nmol) of Metabolite1 in tumor extracellular space
   d/dt(Meta1_ex_f) <- (Meta1_C1_f - Meta1_ex_f / (V_tumor * E_Meta)) * V_tumor * (2 * P_Meta * R_Cap / R_Krogh^2 + 6 * D_Meta / R_Tumor^2) 
@@ -1441,6 +1533,13 @@ paste0(""))
                     - K_Meta_ex_in * NC_Tumor * (V_cell / (V_tumor * E_Meta)) * Meta1_ex_f 
                     + 1 / tau * V_tumor_dyi_3_mm3 * 10^5 * (Meta1_cell_cyto_f + Meta1_cell_lyso_f) * SF
                     + K_Drug_ex_met * Drug_ex_f
+                    - K_Ab_Meta_on * max * Ab_ex_f / E_Ab * Meta1_ex_f
+                    + K_Ab_Meta_off * Ab_ex_b1 / E_Ab * V_tumor
+                    - K_Ab_Meta_on * max * Ab_cell_f_b_ag * NC_Tumor * Meta1_ex_f / V_tumor * SF
+                    + K_Ab_Meta_off * Ab_cell_b1_b_ag * NC_Tumor * SF
+                    - {{Meta1_ex_fKD}}
+                    - {{Meta1_ex_fKD2}}
+                    - {{Meta1_ex_fKD3}}
  
   # Amount (nmol) of Metabolite2 in tumor extracellular space
   d/dt(Meta2_ex_f) <- (Meta2_C1_f - Meta2_ex_f / (V_tumor * E_Meta)) * V_tumor * (2 * P_Meta * R_Cap / R_Krogh^2 + 6 * D_Meta / R_Tumor^2) 

@@ -213,8 +213,7 @@ server <- function(input, output, session) {
       write.table(parameterTable %>% select(Parameter, Value), file, quote = FALSE, row.names = FALSE, col.names = FALSE, sep = ",", append = T)
       
       write("\n# Other inputs", file, append = TRUE)
-      for (name in c("thresholdTumorVolume", "maxTime", "doseT", "doseMaxT", "startT", "enableTmdd", "fitting",
-                     "std.EC50", "std.Ag_cell_t", "nSub", "level")) {
+      for (name in c("maxTime", "doseTo", "dose", "doseDrug", "doseT", "doseMaxT", "startT", "max", "fitting")) {
         # Hardcoded because no distinction between important and unimportant shiny-inputs
         write(paste(name, input[[name]], sep = ","), file, append = TRUE)
       }
@@ -278,7 +277,11 @@ server <- function(input, output, session) {
                 updateRadioButtons(session, inputId = name, selected = c(rawValue))
               } else if (name %in% names(input)) {
                 # For other inputs (not in tables but eg. numericInput shiny elements)
-                updateTextInput(session, name, value = numericValue)
+                if (name %in% c("doseTo")) {
+                  updateTextInput(session, name, value = rawValue)
+                } else {
+                  updateTextInput(session, name, value = numericValue)
+                }
               }
             }
           }

@@ -1,4 +1,4 @@
-Ab_C1_f		0	nmol/kg	"Amount of free Antibody (bound to 0 Protacs) in the central compartment"
+Ab_C1_f		0.0	nmol/kg	"Amount of free Antibody (bound to 0 Protacs) in the central compartment"
 Ab_C1_b1	0	nmol/kg	"Amount of Antibody bound to 1 Protac in the central compartment/plasma"
 Ab_C1_b2	0	nmol/kg	"Amount of Antibody bound to 2 Protacs in the central compartment/plasma"
 Ab_C1_b3	0	nmol/kg	"Amount of Antibody bound to 3 Protacs in the central compartment/plasma"
