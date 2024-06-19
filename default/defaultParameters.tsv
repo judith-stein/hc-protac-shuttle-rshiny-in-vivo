@@ -1,6 +1,6 @@
 BW		0.025	kg		"Weight of species e.g. mouse"
 MW_Ab		150000	g/mol		"Molecular weight of Ab (and bound Protacs)"
-MW_Drug		435.45	g/mol		"Molecular weight of Ab (and bound Protacs)"
+MW_Drug		435.45	g/mol		"Molecular weight of Protac"
 CL_Ab		0.0003	L/h/kg		"Plasma clearance of Ab"
 CLD_Ab		0.006	L/h/kg		"Distribution clearance of Ab"
 V_C1_Ab		0.04	L/kg		"Central volume of distribution for Ab"

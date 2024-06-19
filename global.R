@@ -155,7 +155,8 @@ SimThis <- function(input, conditions, parameters) {
 # Plasma and rest
 MakePlot1 <- function(simData, vis, title, max) {
   mfigure <- plot_ly(simData, x = ~ time / 24, y = ~V_tumor_mm3, name = "V_tumor (mm^3)", type = "scatter", mode = "lines", visible = vis[1]) %>%
-    add_trace(y = ~Ab_C1_f_nM, name = "Ab_C1_f (nM)", mode = "lines", visible = vis[2]) 
+    add_trace(y = ~Ab_C1_f_nM, name = "Ab_C1_f (nM)", mode = "lines", visible = vis[2]) %>%
+  add_trace(y = ~Ab_C1_f, name = "Ab_C1_f (nmol/kg)", mode = "lines", visible = "legendonly") 
   for (i in 1:max) {
     mfigure <- mfigure %>%
       add_trace(y = as.formula(paste0("~Ab_C1_b", i)), name = paste0("Ab_C1_b", i, " (nmol/kg)"), mode = "lines", visible = "legendonly") %>%
@@ -214,6 +215,17 @@ MakePlot1 <- function(simData, vis, title, max) {
       }
     }
   }
+  for (i in 1:max) {
+    mfigure <- mfigure %>%
+      add_trace(y = as.formula(paste0("~Ab_cell_lyso_b", i)), name = paste0("Ab_cell_lyso_b", i), mode = "lines", visible = "legendonly") %>%
+      add_trace(y = as.formula(paste0("~Ab_cell_lyso_m", i)), name = paste0("Ab_cell_lyso_m", i), mode = "lines", visible = "legendonly") 
+    if (max > 1 && i < max) {
+      for (j in 1:(max-i)) {
+        mfigure <- mfigure %>%
+          add_trace(y = as.formula(paste0("~Ab_cell_lyso_b", i, "_m", j)), name = paste0("Ab_cell_lyso_b", i, "_m", j), mode = "lines", visible = "legendonly") 
+      }
+    }
+  }
   mfigure <- mfigure %>%
     add_trace(y = ~Drug_cell_lyso_f, name = "Drug_cell_lyso_f", mode = "lines", visible = vis[14]) %>%
     add_trace(y = ~Meta1_cell_lyso_f, name = "Meta1_cell_lyso_f", mode = "lines", visible = vis[15]) %>%
@@ -248,6 +260,17 @@ MakePlot2 <- function(simData, title, max) {
       for (j in 1:(max-i)) {
         mfigure <- mfigure %>%
           add_trace(y = as.formula(paste0("~Ab_cell_b", i, "_m", j, "_b_ag")), name = paste0("Ab_cell_b", i, "_m", j, "_b_ag"), mode = "lines", visible = "legendonly") 
+      }
+    }
+  }
+  for (i in 1:max) {
+    mfigure <- mfigure %>%
+      add_trace(y = as.formula(paste0("~Ab_cell_lyso_b", i)), name = paste0("Ab_cell_lyso_b", i), mode = "lines", visible = "legendonly") %>%
+      add_trace(y = as.formula(paste0("~Ab_cell_lyso_m", i)), name = paste0("Ab_cell_lyso_m", i), mode = "lines", visible = "legendonly") 
+    if (max > 1 && i < max) {
+      for (j in 1:(max-i)) {
+        mfigure <- mfigure %>%
+          add_trace(y = as.formula(paste0("~Ab_cell_lyso_b", i, "_m", j)), name = paste0("Ab_cell_lyso_b", i, "_m", j), mode = "lines", visible = "legendonly") 
       }
     }
   }
