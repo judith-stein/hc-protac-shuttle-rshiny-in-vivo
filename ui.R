@@ -54,7 +54,7 @@ ui <- shinyUI(dashboardPage(
   dashboardBody(
     tags$script(HTML('$(document).ready(function() {
                       $("header").find("nav").append(\'<div class="myTopBar">\\
-                        ADC In-Vivo: Cytosol Effect: Cytotoxic </div>\');
+                        Protac Shuttle </div>\');
                       })')),
     
     # Include custom CSS to add top bar title and to change background color

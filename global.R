@@ -155,8 +155,9 @@ SimThis <- function(input, conditions, parameters) {
 # Plasma and rest
 MakePlot1 <- function(simData, vis, title, max) {
   mfigure <- plot_ly(simData, x = ~ time / 24, y = ~V_tumor_mm3, name = "V_tumor (mm^3)", type = "scatter", mode = "lines", visible = vis[1]) %>%
+    add_trace(y = ~DAR, name = "Mean DAR in C1", mode = "lines", visible = "legendonly") %>%
     add_trace(y = ~Ab_C1_f_nM, name = "Ab_C1_f (nM)", mode = "lines", visible = vis[2]) %>%
-  add_trace(y = ~Ab_C1_f, name = "Ab_C1_f (nmol/kg)", mode = "lines", visible = "legendonly") 
+    add_trace(y = ~Ab_C1_f, name = "Ab_C1_f (nmol/kg)", mode = "lines", visible = "legendonly") 
   for (i in 1:max) {
     mfigure <- mfigure %>%
       add_trace(y = as.formula(paste0("~Ab_C1_b", i)), name = paste0("Ab_C1_b", i, " (nmol/kg)"), mode = "lines", visible = "legendonly") %>%
@@ -185,6 +186,8 @@ MakePlot1 <- function(simData, vis, title, max) {
     add_trace(y = ~Drug_C1_f, name = "Drug_C1_f (nM)", mode = "lines", visible = vis[4]) %>%
     add_trace(y = ~Meta1_C1_f, name = "Meta1_C1_f (nM)", mode = "lines", visible = vis[5]) %>%
     add_trace(y = ~Meta2_C1_f, name = "Meta2_C1_f (nM)", mode = "lines", visible = vis[6]) %>%
+    add_trace(y = ~Ab_C1_t_nM, name = "Ab_C1_t (nM)", mode = "lines", visible = "legendonly") %>%
+    add_trace(y = ~Ab_C2_t_nM, name = "Ab_C2_t (nM)", mode = "lines", visible = "legendonly") %>%
     add_trace(y = ~Drug_C2_f, name = "Drug_C2_f (nM)", mode = "lines", visible = vis[7]) %>%
     add_trace(y = ~Drug_C1_b_ntp, name = "Drug_C1_b_ntp (nM)", mode = "lines", visible = vis[8]) %>%
     add_trace(y = ~Ab_ex_f, name = "Ab_ex_f (nM)", mode = "lines", visible = vis[9]) 
@@ -341,223 +344,6 @@ ExpPlot <- function(simData, input, title) {
     labs(x = "Time (days)", y = paste0("Tumor volume (mm", tags$sup("3"), ")")) 
   
   return(mfigure)
-}
-
-VarPlot <- function(simData, input, title) {
-  experimentalData <- LoadExpData(input$expDataAsString2)
-
-  level <- input$level
-  ymin <- (1-level)/2
-  ymax <- 1 - (1-level)/2
-  parm <- "V_tumor_mm3"
-  simLegendTitle <- "Sim"
-  data <- confint(simData, parm, level)
-  data$time <- data$time/24
-
-  if ("eff" %in% names(data)) {
-    data <- data %>%
-      tidyr::pivot_wider(
-        id_cols = time,
-        names_from = p1,
-        values_from = eff
-      )
-    p <- plot_ly(data)
-    p <- p %>%
-      add_trace(
-        x=~time,
-        y=~`0.5`,
-        name=simLegendTitle,
-        type = "scatter",
-        mode = "lines"
-      ) %>%
-      add_ribbons(
-        data=data,
-        x=~time,
-        ymin=as.formula(paste0("~`", ymin, "`")),
-        ymax=as.formula(paste0("~`", ymax, "`")),
-        name=paste("Confidence interval range:", ymin, "-", ymax),
-        type = "scatter",
-        mode = "lines"
-      )
-  } else if ("p50" %in% names(data)) {
-    cols <- colnames(data)
-    pcols <- sort(cols[startsWith(cols, "p") & !(cols == "p1")])
-    data <- data %>%
-      tidyr::pivot_longer(
-          cols=pcols,
-          names_to="p2",
-          values_to="tmp"
-        ) %>%
-      tidyr::pivot_wider(
-        id_cols=time,
-        names_from=c("p2", "p1"),
-        values_from="tmp"
-      )
-    p <- plot_ly(data)
-    p <- p %>%
-      add_trace(
-        x=~time,
-        y=~`p50_0.5`,
-        name=paste(simLegendTitle, "0.5"),
-        type = "scatter",
-        mode = "lines"
-      ) %>%
-      add_ribbons(
-        data=data,
-        x=~time,
-        ymin=as.formula(paste0("~`", pcols[1], "_0.5`")),
-        ymax=as.formula(paste0("~`", pcols[length(pcols)], "_0.5`")),
-        name=paste("0.5 CL:", ymin, ymax),
-        type = "scatter",
-        mode = "lines"
-      ) %>%
-      add_trace(
-        x=~time,
-        y=as.formula(paste0("~`p50_", ymin, "`")),
-        name=paste(simLegendTitle, ymin),
-        type = "scatter",
-        mode = "lines"
-      ) %>%
-      add_ribbons(
-        data=data,
-        x=~time,
-        ymin=as.formula(paste0("~`", pcols[1], "_", ymin, "`")),
-        ymax=as.formula(paste0("~`", pcols[length(pcols)], "_", ymin, "`")),
-        name=paste(ymin, "CL:", ymin, ymax),
-        type = "scatter",
-        mode = "lines"
-      ) %>%
-      add_trace(
-        x=~time,
-        y=as.formula(paste0("~`p50_", ymax, "`")),
-        name=paste(simLegendTitle, ymax),
-        type = "scatter",
-        mode = "lines"
-      ) %>%
-      add_ribbons(
-        data=data,
-        x=~time,
-        ymin=as.formula(paste0("~`", pcols[1], "_", ymax, "`")),
-        ymax=as.formula(paste0("~`", pcols[length(pcols)], "_", ymax, "`")),
-        name=paste(ymax, "CL:", ymin, ymax),
-        type = "scatter",
-        mode = "lines"
-      )
-  }
-
-  if (!is.null(experimentalData)) {
-    experimentalData$ymin <- experimentalData$V_tumor_mm3 - experimentalData$dev
-    experimentalData$ymax <- experimentalData$V_tumor_mm3 + experimentalData$dev
-    p <- p %>%
-      add_trace(
-        data=experimentalData,
-        x=~time,
-        y=~V_tumor_mm3,
-        name="Exp",
-        type = "scatter",
-        mode = "lines+markers"
-      ) %>%
-      add_ribbons(
-        data=experimentalData,
-        x=~time,
-        ymin=~ymin,
-        ymax=~ymax,
-        name=paste("Exp deviance"),
-        type = "scatter",
-        mode = "lines"
-      )
-  }
-
-  p <- p %>%
-    layout(
-      margin = list(t = 50),
-      title = title,
-      xaxis = list(title = "Time (days)"),
-      yaxis = list(title = paste0("Tumor volume (mm", tags$sup("3"), ")"))
-    ) %>%
-    config(
-      displaylogo = FALSE,
-      toImageButtonOptions = list(format = "png")
-    )
-  return(p)
-}
-
-MakeWaterfallPlot <- function(input, xyzData) {
-  # Waterfall plot
-  # Note, that NA's do not show on the plot at all
-  
-  x <- xyzData[["x"]]
-  y <- xyzData[["y"]]
-  d <- xyzData[[input$zAxisItem]]
-  
-  # Create y-markers because x gives color and we want to
-  # distinquish y somehow as well
-  leny <- length(y)
-  ym <- rep("", leny)
-  for (i in 1:leny) {
-    # eg. for four values, make "*<br>" "**<br>" "***<br>" "***<br>* "
-    # which would look like: * ** *** ***
-    #                                 *
-    k <- i
-    layers <- 0
-    while (k > 0) {
-      ym[i] <- paste0(c(ym[i], rep("*", min(3, k)), "<br>"), collapse = "")
-      layers <- layers + 1
-      k <- k - 3
-    }
-    if (layers > 1) ym[i] <- paste0(ym[i], " ")
-  }
-  
-  df <- data.frame(
-    col = rep(x, each = nrow(d)),
-    row = rep(y, ncol(d)),
-    ym = rep(ym, ncol(d)),
-    value = as.vector(d)
-  )
-  
-  df2 <- df[order(-df$value), ]
-  
-  xInOrder <- paste0("X: ", df2$col, " and Y: ", df2$row)
-  yInOrder <- df2$value
-  
-  xWithColors <- df2$col
-  yWithStars <- df2$ym
-  
-  if (input$zAxisItem == "Tumor size (waterfall plot)") {
-    title = list(title = "Tumor size change (%) from initial")
-  } else {title = list(title = "Sum of longest diameter change (%) from initial")}
-  
-  plotWaterfall <- plot_ly(
-    x = xInOrder,
-    y = yInOrder,
-    name = "Waterfall Plot",
-    type = "bar",
-    marker = list(
-      color = xWithColors,
-      colorscale = list( # From light blue:
-        list(0, "rgb(198,219,239)"),
-        # To dark blue:
-        list(1, "rgb(33,113,181)")
-      )
-    )
-  ) %>%
-    layout(
-      xaxis = list(
-        categoryorder = "array",
-        # Only way to order bars:
-        categoryarray = yInOrder
-      ),
-      yaxis = title
-    ) %>%
-    add_annotations(
-      text = yWithStars,
-      x = xInOrder,
-      y = yInOrder,
-      xref = "x",
-      yref = "y",
-      showarrow = FALSE
-    )
-  return(plotWaterfall)
 }
 
 

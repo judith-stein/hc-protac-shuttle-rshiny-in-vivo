@@ -377,6 +377,23 @@ ReplaceIfThere <- function(namedList, name, newValue) {
 
 BuildModelForN <- function(max = 1) {
   
+  Ab_C1_t1 <- ifelse(max >= 1, 
+                    paste0("Ab_C1_b", 1:max, " + Ab_C1_m", 1:max, collapse=" + "), 
+                    paste0("0"))
+  
+  Ab_C2_t1 <- ifelse(max >= 1, 
+                     paste0("Ab_C2_b", 1:max, " + Ab_C2_m", 1:max, collapse=" + "), 
+                     paste0("0"))
+  Ab_C2_t2 <- ifelse(max >= 2, 
+                     paste0("Ab_C2_b1_m", 1:(max-1), collapse=" + "), 
+                     paste0("0"))
+  Ab_C2_t3 <- ifelse(max >= 3, 
+                     paste0("Ab_C2_b2_m", 1:(max-2), collapse=" + "), 
+                     paste0("0"))
+  Ab_C2_t4 <- ifelse(max == 4, 
+                     paste0("Ab_C2_b3_m1"), 
+                     paste0("0"))
+  
   Ab_C1_b1KD <- ifelse(max >= 2, 
                      paste0("- K_Ab_Drug_on * (max - 1) * Ab_C1_b1 * Drug_C1_f + K_Ab_Drug_off * Ab_C1_b2
                               - K_Ab_Meta_on * (max - 1) * Ab_C1_b1 * Meta1_C1_f
@@ -635,7 +652,7 @@ d/dt(Ab_C2_b4) <- (CLD_Ab / V_C1_Ab) * Ab_C1_b4
                            paste0("Ab_C1_b2_m", 1:(max-2), collapse=" + "), 
                            paste0("0"))
   Drug_C1_combi3 <- ifelse(max == 4, 
-                           paste0(" Ab_C1_b3_m1"), 
+                           paste0("Ab_C1_b3_m1"), 
                            paste0("0"))
   
   Drug_C1_f <- ifelse(max >= 1, 
@@ -1343,6 +1360,15 @@ paste0(""))
   
   # Radius tumor in cm
   R_Tumor ~ (3 * V_tumor / (4 * pi))^(1/3) * 10
+ 
+  # Total antibody concentration in plasma
+  Ab_C1_t_nM <- (Ab_C1_f + {{Ab_C1_t1}} + {{Drug_C1_combi1}} + {{Drug_C1_combi2}} + {{Drug_C1_combi3}}) / V_C1_Ab
+ 
+  # Total antibody concentration in peripheral compartment
+  Ab_C2_t_nM <- (Ab_C2_f + {{Ab_C2_t1}} + {{Ab_C2_t2}} + {{Ab_C2_t3}} + {{Ab_C2_t4}}) / V_C2_Ab
+ 
+  # Mean DAR in plasma
+  DAR <- ((Ab_C1_f * 0 + ({{Drug_C1_b}}) + ({{Drug_C1_combi1}}) * 1 + ({{Drug_C1_combi2}}) * 2 + {{Drug_C1_combi3}} * 3) * BW / SF) / (Ab_C1_t_nM * V_C1_Ab * BW / SF)
   
   
   # Ordinary differential equations ------------------------------
