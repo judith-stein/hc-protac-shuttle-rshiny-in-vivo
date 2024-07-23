@@ -97,7 +97,7 @@ ui <- shinyUI(dashboardPage(
           numericInput("doseT", "Dose given every x day", value = 0),
           numericInput("doseMaxT", "For a total number of times of (1 + x)", value = 0),
           numericInput("startT", "Dosing start time (h)", value = 0), 
-          numericInput("max", "Max. number of bound protacs per antibody", value = 4),
+          numericInput("max", "Max. number of bound protacs per antibody", value = 2),
           "min=1 and max=4"
           )
           ),
@@ -179,6 +179,35 @@ ui <- shinyUI(dashboardPage(
                                      rows = 6
                        ),
                        plotlyOutput(outputId = "plotExpData", width = 800 * 1, height = 600 * 0.8)
+              ),
+              tabPanel("Mean DAR",
+                       textAreaInput(
+                         "KD",
+                         "K_Ab_Drug_off (1/h), whereby K_Ab_Drug_on = 1 1/nM/h",
+                         LoadDataDefault("default/defaultKdInstructions.json"),
+                         rows = 6
+                       ),
+                       textAreaInput(
+                         "Doses",
+                         "Dose (mg/kg)",
+                         LoadDataDefault("default/defaultDoseInstructions.json"),
+                         rows = 6
+                       ),
+                       textAreaInput(
+                         "CL",
+                         "CL_Drug (L/h/kg)",
+                         LoadDataDefault("default/defaultClInstructions.json"),
+                         rows = 6
+                       ),
+                       plotlyOutput(outputId = "plotDAR", width = 700 * 1, height = 450 * 0.8)
+              ),
+              tabPanel("Drug PK",
+                       helpText("Comparison of PK of Drug with/without Shuttle and max = 2", style = "caption-side: top; text-align: center; color:black;font-size:125%"), br(),
+                       numericInput("dose_ADC", "Single dose Ab_C1_b2 (mg/kg)", value = 2),
+                       numericInput("dose_Drug", "Single dose of free Protac Drug_C1_f (mg/kg)", value = 0),
+                       "Both doses should lead to equal protac amount, see text output below",
+                       plotlyOutput(outputId = "plotPaper", width = 600 * 1, height = 450 * 0.8), br(),
+                       verbatimTextOutput(outputId = "start"), 
               )
             )
           )

@@ -1343,6 +1343,13 @@ paste0(""))
     
     Meta1_cell_lyso_f <- paste0("K_Ab_deg * ((", Meta1_cell_lyso_fDeg, ") + (", Meta1_cell_lyso_f_combi1, ") + (", Meta1_cell_lyso_f_combi2, ") + ", Ab_ex_f_combi3, ")", collapse=" + ")
   
+    DAR1 <- ifelse(max >= 2, 
+                                paste0("Ab_C1_b1_m", 1:(max-1), " * ", 2:(max), collapse=" + "), 
+                                paste0("0"))
+    DAR2 <- ifelse(max >= 3, 
+                                paste0("Ab_C1_b2_m", 1:(max-2), " * ", 2:(max-1), collapse=" + "), 
+                                paste0("0"))
+  
   
   Model <- paste0("
  # Modeling assignemnts -----------------------------------
@@ -1368,8 +1375,10 @@ paste0(""))
   Ab_C2_t_nM <- (Ab_C2_f + {{Ab_C2_t1}} + {{Ab_C2_t2}} + {{Ab_C2_t3}} + {{Ab_C2_t4}}) / V_C2_Ab
  
   # Mean DAR in plasma
+  # only Protacs
   DAR <- ((Ab_C1_f * 0 + ({{Drug_C1_b}}) + ({{Drug_C1_combi1}}) * 1 + ({{Drug_C1_combi2}}) * 2 + {{Drug_C1_combi3}} * 3) * BW / SF) / (Ab_C1_t_nM * V_C1_Ab * BW / SF)
-  
+  # Protacs + Metabolite1
+  DAR2 <- ((Ab_C1_f * 0 + ({{Drug_C1_b}}) + ({{Drug_C1_m}}) + ({{DAR1}}) + ({{DAR2}}) + {{Drug_C1_combi3}} * 4) * BW / SF) / (Ab_C1_t_nM * V_C1_Ab * BW / SF)
   
   # Ordinary differential equations ------------------------------
   ########################

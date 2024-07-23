@@ -213,7 +213,7 @@ server <- function(input, output, session) {
       write.table(parameterTable %>% select(Parameter, Value), file, quote = FALSE, row.names = FALSE, col.names = FALSE, sep = ",", append = T)
       
       write("\n# Other inputs", file, append = TRUE)
-      for (name in c("maxTime", "doseTo", "dose", "doseDrug", "doseT", "doseMaxT", "startT", "max", "fitting")) {
+      for (name in c("maxTime", "doseTo", "dose", "doseDrug", "doseT", "doseMaxT", "startT", "max", "fitting", "dose_ADC", "dose_Drug")) {
         # Hardcoded because no distinction between important and unimportant shiny-inputs
         write(paste(name, input[[name]], sep = ","), file, append = TRUE)
       }
@@ -222,6 +222,10 @@ server <- function(input, output, session) {
           # Hardcoded because no distinction between important and unimportant shiny-inputs
           write(paste(name, input[[name]], sep = ","), file, append = TRUE)
         }
+      }
+      for (name in c("KD", "Doses", "CL")) {
+        write(paste0("\n# ", name), file, append = TRUE)
+        write(paste(input[[name]], sep = ","), file, append = TRUE)
       }
       
       for (name in c("expDataAsString", "expDataAsString2")) {
@@ -242,7 +246,20 @@ server <- function(input, output, session) {
       inputSetStrings <- strsplit(fileAsString, "#")[[1]]
       
       for (s in inputSetStrings) {
-        if (startsWith(s, " expDataAsString")) { # || startsWith(s, " expDataAsString2")
+        if (startsWith(s, " KD") || startsWith(s, " Doses") || startsWith(s, " CL")) {
+          text <- strsplit(s, "\n")
+          title <- strsplit(text[[1]][1], "\r")
+          title <- gsub(" ", "", title)
+          content <- text[[1]][-1]
+          text <- content[1]
+          if (length(content) > 1){
+            for (i in 2:length(content)) {
+              text <- paste(text, gsub("\"", "", content[i]), sep = "\n")
+            }
+            text <- gsub("values", "\"values\"", text)
+          }
+          updateTextAreaInput(session, title, value = text)
+        } else if (startsWith(s, " expDataAsString")) { # || startsWith(s, " expDataAsString2")
           test <- strsplit(s, "\n")
           content <- test[[1]][-1]
           text <- content[1]
@@ -340,6 +357,29 @@ server <- function(input, output, session) {
     })
   })
   
+  RunSimMult <- reactive({
+    input$update
+    isolate({
+      validate(need(parse_number(gsub("C1", "", input$doseTo)) <= input$max || input$doseTo == "Ab_C1_f", "x in bx of dose for PROxAb <= max. number of bound protacs per antibody!"))
+      withProgress({
+        setProgress(message = "Calculating...")
+        
+        results <- SimThisMult(input, conditionTable, parameterTable)
+      })
+    })
+  })
+  
+  RunSimPaper <- reactive({
+    input$update
+    isolate({
+      withProgress({
+        setProgress(message = "Calculating...")
+        
+        results <- SimThisPaper(input, conditionTable, parameterTable)
+      })
+    })
+  })
+  
 
   #
   ############### Plots feature ----------------
@@ -372,6 +412,20 @@ server <- function(input, output, session) {
     ExpPlot(RunSim()$numericalSolution, input, "Comparison of simulation with experimental data")
   })
   
+  output$plotDAR <- renderPlotly({
+    input$update
+    isolate({
+      MakePlotDAR(RunSimMult(), "Mean DAR in plasma (only Drug)")
+    })
+  })
+  
+  output$plotPaper <- renderPlotly({
+    input$update
+    isolate({
+      MakePlotPaper(RunSimPaper(), "Relative remaining Drug")
+    })
+  })
+  
 
   #
   ############### Text output ----------------
@@ -393,6 +447,12 @@ server <- function(input, output, session) {
         cat("Estimated parameters:", data)
       } 
     }
+  })
+  
+  output$start <- renderPrint({
+    data <- RunSimPaper()
+      cat("Start amount only drug:", data[[1]]$start[1], "nmol
+start amount with Shuttle:", data[[2]]$start[1], "nmol")
   })
   
 
