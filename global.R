@@ -33,14 +33,17 @@ defaultExpDataAsString <- readChar(
   "default/defaultData.tsv",
   file.info("default/defaultData.tsv")$size
 )
-
+defaultDosesAsString <- readChar(
+  "default/defaultDoses.tsv",
+  file.info("default/defaultDoses.tsv")$size
+)
 
 #
 ############### Simulation ----------------
 #
 
 SimThis <- function(input, conditions, parameters) {
-
+  
   experimentalData <- LoadExpData(input$expDataAsString)
   
   initialConditions <- PickValuesToNumeric(conditions)
@@ -124,7 +127,7 @@ SimThis <- function(input, conditions, parameters) {
   }
   
   #################################### Fitting end
-
+  
   # writeLines(BuildModelForN(max = input$max), "model.txt")
   Model <<- rxode2(BuildModelForN(max = input$max))
   
@@ -148,7 +151,7 @@ SimThis <- function(input, conditions, parameters) {
 }
 
 SimThisMult <- function(input, conditions, parameters) {
-
+  
   initialConditions <- PickValuesToNumeric(conditions)
   initialParameters <- PickValuesToNumeric(parameters)
   initialParameters["max"] <- input$max
@@ -221,43 +224,80 @@ SimThisPaper <- function(input, conditions, parameters) {
   dosing[2,2] <- 0
   
   for (i in 1:2) {
-        
-        # EventTable as Input for RxODE: dosing and observation (sampling) events
-        et <- eventTable(amount.units = "1", time.units = "hours")
-        timeSteps <- seq(from = 0, to = 72, by = 1/8) 
-        et$add.sampling(timeSteps)
-        et$add.dosing(dosing.to = "Ab_C1_b2",
-                      dose = dosing[i,1] * 0.001 / initialParameters["MW_Ab"] * 1e9, # convert from mg/kg to nmol/kg
-                      )
-        et$add.dosing(dosing.to = "Drug_C1_f",
-                      dose = dosing[i,2] * 1e6 / initialParameters["MW_Drug"] / initialParameters["V_C1_Drug"], # From mg/kg to nmol/L
-                      )
-        
-        Model <<- rxode2(BuildModelForN(max = 2))
-        
-        # Solve equation with given parameters with RxODE
-        numericalSolution <- as.data.frame(Model$solve(initialParameters,
-                                                       et,
-                                                       initialConditions)
-        )
-        
-        if (i == 1) {
-          # only drug
-          # % of Drug_C1_f / Drug_C1_f(0) * 100
-          numericalSolution["perc"] <- numericalSolution["Drug_C1_f"] / as.numeric(dosing[1,2] * 1e6 / initialParameters["MW_Drug"] / initialParameters["V_C1_Drug"]) * 100
-          # for comparison if drug amount is the same at the beginning
-          numericalSolution["start"] <- numericalSolution["Drug_C1_f"] * initialParameters["V_C1_Drug"] * initialParameters["BW"] # convert nmol/L in nmol
-        } else {
-          # shuttle
-          # % of mean DAR / DAR(0) * 100 with DAR(0) = 2 ignoring Drug_C1_f
-          numericalSolution["perc"] <- numericalSolution["DAR"] / 2 * 100
-          numericalSolution["start"] <- numericalSolution["Ab_C1_b2"] * initialParameters["BW"] * 2 # convert nmol/kg in nmol, then * 2, since 2 bound Protacs per Ab
-        }
-        
-        allSolutions[[i]] <- numericalSolution
-      }
+    
+    # EventTable as Input for RxODE: dosing and observation (sampling) events
+    et <- eventTable(amount.units = "1", time.units = "hours")
+    timeSteps <- seq(from = 0, to = 72, by = 1/8) 
+    et$add.sampling(timeSteps)
+    et$add.dosing(dosing.to = "Ab_C1_b2",
+                  dose = dosing[i,1] * 0.001 / initialParameters["MW_Ab"] * 1e9, # convert from mg/kg to nmol/kg
+    )
+    et$add.dosing(dosing.to = "Drug_C1_f",
+                  dose = dosing[i,2] * 1e6 / initialParameters["MW_Drug"] / initialParameters["V_C1_Drug"], # From mg/kg to nmol/L
+    )
+    
+    Model <<- rxode2(BuildModelForN(max = 2))
+    
+    # Solve equation with given parameters with RxODE
+    numericalSolution <- as.data.frame(Model$solve(initialParameters,
+                                                   et,
+                                                   initialConditions)
+    )
+    
+    if (i == 1) {
+      # only drug
+      # % of Drug_C1_f / Drug_C1_f(0) * 100
+      numericalSolution["perc"] <- numericalSolution["Drug_C1_f"] / as.numeric(dosing[1,2] * 1e6 / initialParameters["MW_Drug"] / initialParameters["V_C1_Drug"]) * 100
+      # for comparison if drug amount is the same at the beginning
+      numericalSolution["start"] <- numericalSolution["Drug_C1_f"] * initialParameters["V_C1_Drug"] * initialParameters["BW"] # convert nmol/L in nmol
+    } else {
+      # shuttle
+      # % of mean DAR / DAR(0) * 100 with DAR(0) = 2 ignoring Drug_C1_f
+      numericalSolution["perc"] <- numericalSolution["DAR"] / 2 * 100
+      numericalSolution["start"] <- numericalSolution["Ab_C1_b2"] * initialParameters["BW"] * 2 # convert nmol/kg in nmol, then * 2, since 2 bound Protacs per Ab
+    }
+    
+    allSolutions[[i]] <- numericalSolution
+  }
   
   return(numericalSolution = allSolutions)
+}
+
+SimThisMultiple <- function(input, conditions, parameters) {
+  
+  dosingSchemes <- read.table(text = input$multiDoseAsString, dec = ",")
+  names(dosingSchemes) <- c("dose", "doseDaysGiven", "doseMaxTimes")
+  
+  initialConditions <- PickValuesToNumeric(conditions)
+  initialParameters <- PickValuesToNumeric(parameters)
+  initialParameters["max"] <- input$max
+  
+  results <- list()
+  for (i in 1:nrow(dosingSchemes)) {
+    
+    initialParameters["Dose"] <- dosingSchemes[i, "dose"]
+    
+    # EventTable as Input for RxODE: dosing and observation (sampling) events
+    et <- eventTable(amount.units = "1", time.units = "hours")
+    timeSteps <- seq(from = 0, to = input$maxTime * 24, by = 1/2) 
+    et$add.sampling(timeSteps)
+    et$add.dosing(dosing.to = input$doseTo,
+                  dose = dosingSchemes[i, "dose"] * 0.001 / initialParameters["MW_Ab"] * 1e9, # convert from mg/kg to nmol/kg
+                  nbr.doses = dosingSchemes[i, "doseMaxTimes"] + 1,
+                  dosing.interval = dosingSchemes[i, "doseDaysGiven"] * 24)
+    
+    Model <<- rxode2(BuildModelForN(max = input$max))
+    
+    # Solve equation with given parameters with RxODE
+    numericalSolution <- as.data.frame(Model$solve(initialParameters,
+                                                   et,
+                                                   initialConditions)
+    )
+    
+    results[[i]] <- numericalSolution
+  }
+  
+  return(results)
 }
 
 #
@@ -474,7 +514,7 @@ ExpPlot <- function(simData, input, title, PK = NULL) {
       mfigure <- mfigure +
         geom_line(data=simData, aes(x=time, y=ngmL_Drug_C1_t, color="Sim"))
     }
-
+    
   }
   
   return(mfigure)
@@ -482,7 +522,7 @@ ExpPlot <- function(simData, input, title, PK = NULL) {
 
 # Mean DAR in plasma
 MakePlotDAR <- function(allData, title) {
-
+  
   mfigure <- plot_ly(allData[[1]], x = ~ time / 24, y = ~DAR, name = paste0("KD = ", allData[[1]]$K_Ab_Drug_off[1], ", Dose = ", allData[[1]]$Dose[1], ", CL = ", allData[[1]]$CL_Drug[1]), type = "scatter", mode = "lines") %>%
     layout(
       margin = list(t = 50), title = title,
@@ -515,6 +555,36 @@ MakePlotPaper <- function(allData, title) {
   return(mfigure)
 }
 
+MakePlotMult <- function(allData, input, DAR = NULL) {
+  
+  dosingSchemes <- read.table(text = input$multiDoseAsString, dec = ",")
+  names(dosingSchemes) <- c("dose", "doseDaysGiven", "doseMaxTimes")
+  if (is.null(DAR)) {
+    y <- "ngmL_Drug_C1_t"
+    title <- "Total PROTAC concentration in plasma"
+    yaxis <- "Drug_C1_t (ng/mL)"
+  } else {
+    y <- "DAR"
+    title <- "Mean DAR in plasma (only PROTAC)"
+    yaxis <- "DAR"
+  }
+  
+  mfigure <- plot_ly(allData[[1]], x = ~ time / 24, y = reformulate(y), 
+                     name = paste0(dosingSchemes$dose[1], " mg/kg Q", dosingSchemes$doseDaysGiven[1], "D"), type = "scatter", mode = "lines") %>%
+    layout(
+      margin = list(t = 50), title = title,
+      xaxis = list(title = "Time (days)"),
+      yaxis = list(title = yaxis )#, type = "log")
+    ) %>%
+    config(displaylogo = FALSE, toImageButtonOptions = list(format = "png")) # To hide the link
+  
+  for (i in 2:length(allData)) {
+    mfigure <- add_trace(mfigure, data = allData[[i]], y = reformulate(y), 
+                         name = paste0(dosingSchemes$dose[i], " mg/kg Q", dosingSchemes$doseDaysGiven[i], "D"), mode = "lines")
+  }
+  
+  return(mfigure)
+}
 
 #
 #################### Databook feature ---------------------

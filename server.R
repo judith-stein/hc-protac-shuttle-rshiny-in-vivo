@@ -380,11 +380,26 @@ server <- function(input, output, session) {
     })
   })
   
-
+  RunSimMultiple <- reactive({
+    # Change when "update" button is pressed
+    input$update
+    # ...but not for anything else
+    isolate({
+      withProgress({
+        setProgress(message = "Calculating multiple dosing...")
+        
+        # Calculate
+        results <- SimThisMultiple(input, conditionTable, parameterTable)
+        
+        results
+      })
+    })
+  })
+  
   #
   ############### Plots feature ----------------
   #
-
+  
   output$plotPlasma <- renderPlotly({
     show <- c("legendonly", T, "legendonly", rep(T, 3), "legendonly", T, rep("legendonly", 17))
     input$update
@@ -430,7 +445,15 @@ server <- function(input, output, session) {
     })
   })
   
-
+  output$plotMult <- renderPlotly({
+    MakePlotMult(RunSimMultiple(), input)
+  })
+  
+  output$plotMult2 <- renderPlotly({
+    MakePlotMult(RunSimMultiple(), input, "DAR")
+  })
+  
+  
   #
   ############### Text output ----------------
   #
@@ -439,7 +462,11 @@ server <- function(input, output, session) {
     result <- RunSim()$numericalSolution
     # result <- result[ , !names(result) %in% c("Ab_C1_f", "Ab_C2_f", "EC50", "Ag_cell_t", "ADC_ex_f_E_ADC")]
     custom_formatted_results <- FormatSimRawDataForOutput(result)
-    custom_formatted_results
+    datatable(custom_formatted_results,
+              rownames   = FALSE,
+              extensions = c("Buttons"),
+              options = list(dom = "tpB", buttons = c('copy', "csv", "excel"))
+    )
   })
   
   output$fittingResult <- renderPrint({
@@ -455,7 +482,7 @@ server <- function(input, output, session) {
   
   output$start <- renderPrint({
     data <- RunSimPaper()
-      cat("Start amount only drug:", data[[1]]$start[1], "nmol
+    cat("Start amount only drug:", data[[1]]$start[1], "nmol
 start amount with Shuttle:", data[[2]]$start[1], "nmol")
   })
   
@@ -471,5 +498,5 @@ start amount with Shuttle:", data[[2]]$start[1], "nmol")
     
     cat(paste(str1, sep = "\n"))
   })
-
+  
 }

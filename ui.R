@@ -54,7 +54,7 @@ ui <- shinyUI(dashboardPage(
   dashboardBody(
     tags$script(HTML('$(document).ready(function() {
                       $("header").find("nav").append(\'<div class="myTopBar">\\
-                        Protac Shuttle </div>\');
+                        PROxAb Shuttle </div>\');
                       })')),
     
     # Include custom CSS to add top bar title and to change background color
@@ -80,26 +80,26 @@ ui <- shinyUI(dashboardPage(
           splitLayout(
             cellWidths = c("50%", "50%"),
             div(
-          numericInput("maxTime", "Max t (days)", value = 52),
-          selectInput("doseTo", "Dose of which PROxAb:",
-                      list(
-                        "Ab_C1_f", "Ab_C1_b1", "Ab_C1_b2", "Ab_C1_b3", "Ab_C1_b4"
-                      ),
-                      selected = "Ab_C1_b1"
-          ),
-          "bx <= max. number of bound protacs per Ab",
-          numericInput("dose", "Dose (mg/kg)", value = 2),
-          numericInput("doseDrug", "Extra dose of free Protac Drug_C1_f (mg/kg)", value = 0),
-          "Dose converted to nmol/kg or nM with corresponding MW", br(),
-          "Same dosing scheme for free Protac and Shuttle", 
+              numericInput("maxTime", "Max t (days)", value = 52),
+              selectInput("doseTo", "Dose of which PROxAb:",
+                          list(
+                            "Ab_C1_f", "Ab_C1_b1", "Ab_C1_b2", "Ab_C1_b3", "Ab_C1_b4"
+                          ),
+                          selected = "Ab_C1_b1"
+              ),
+              "bx <= max. number of bound protacs per Ab",
+              numericInput("dose", "Dose (mg/kg)", value = 2),
+              numericInput("doseDrug", "Extra dose of free Protac Drug_C1_f (mg/kg)", value = 0),
+              "Dose converted to nmol/kg or nM with corresponding MW", br(),
+              "Same dosing scheme for free Protac and Shuttle", 
             ),
-          div(
-          numericInput("doseT", "Dose given every x day", value = 0),
-          numericInput("doseMaxT", "For a total number of times of (1 + x)", value = 0),
-          numericInput("startT", "Dosing start time (h)", value = 0), 
-          numericInput("max", "Max. number of bound protacs per antibody", value = 2),
-          "min=1 and max=4"
-          )
+            div(
+              numericInput("doseT", "Dose given every x day", value = 0),
+              numericInput("doseMaxT", "For a total number of times of (1 + x)", value = 0),
+              numericInput("startT", "Dosing start time (h)", value = 0), 
+              numericInput("max", "Max. number of bound protacs per antibody", value = 2),
+              "min=1 and max=4"
+            )
           ),
           br(),
           actionButton("update", "Calculate and plot"), br(), br(),
@@ -224,6 +224,15 @@ ui <- shinyUI(dashboardPage(
                        ),
                        plotlyOutput(outputId = "plotExpData2", width = 800 * 1, height = 600 * 0.8),
                        verbatimTextOutput(outputId = "AUC")
+              ),
+              tabPanel("Multiple Dosing",
+                       textAreaInput("multiDoseAsString",
+                                     HTML("Dosing schemes to be compared for Shuttle: <br/><h6> Start dose (mg/kg) &lt;space&gt; Every x day &lt;space&gt; Total of (x+1) times <br/> (space delimited and comma as decimals) </h6>"),
+                                     value = defaultDosesAsString,
+                                     rows = 6
+                       ),
+                       plotlyOutput(outputId = "plotMult", width = 800 * 1, height = 600 * 0.8),
+                       plotlyOutput(outputId = "plotMult2", width = 800 * 1, height = 600 * 0.8)
               )
             )
           )
