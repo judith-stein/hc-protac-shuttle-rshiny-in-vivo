@@ -1370,15 +1370,20 @@ paste0(""))
  
   # Total antibody concentration in plasma
   Ab_C1_t_nM <- (Ab_C1_f + {{Ab_C1_t1}} + {{Drug_C1_combi1}} + {{Drug_C1_combi2}} + {{Drug_C1_combi3}}) / V_C1_Ab
+  ngmL_Ab_C1_t <- Ab_C1_t_nM * 1e-03 * MW_Ab
  
   # Total antibody concentration in peripheral compartment
   Ab_C2_t_nM <- (Ab_C2_f + {{Ab_C2_t1}} + {{Ab_C2_t2}} + {{Ab_C2_t3}} + {{Ab_C2_t4}}) / V_C2_Ab
  
+  # Total Protac in plasma
+  Drug_C1_t <- Drug_C1_f / SF * V_C1_Drug * BW + Drug_C1_b_ntp / SF * V_C1_Drug * BW + ({{Drug_C1_b}}) / SF * BW + ({{Drug_C1_combi1}}) * 1 / SF * BW + ({{Drug_C1_combi2}}) * 2 / SF * BW + {{Drug_C1_combi3}} * 3 / SF * BW
+  ngmL_Drug_C1_t <- Drug_C1_t * MW_Drug * SF / V_C1_Drug / BW * 1e-03
+ 
   # Mean DAR in plasma
   # only Protacs
-  DAR <- ((Ab_C1_f * 0 + ({{Drug_C1_b}}) + ({{Drug_C1_combi1}}) * 1 + ({{Drug_C1_combi2}}) * 2 + {{Drug_C1_combi3}} * 3) * BW / SF) / (Ab_C1_t_nM * V_C1_Ab * BW / SF)
+  DAR <- (Ab_C1_f * 0 + ({{Drug_C1_b}}) + ({{Drug_C1_combi1}}) * 1 + ({{Drug_C1_combi2}}) * 2 + {{Drug_C1_combi3}} * 3) / (Ab_C1_t_nM * V_C1_Ab)
   # Protacs + Metabolite1
-  DAR2 <- ((Ab_C1_f * 0 + ({{Drug_C1_b}}) + ({{Drug_C1_m}}) + ({{DAR1}}) + ({{DAR2}}) + {{Drug_C1_combi3}} * 4) * BW / SF) / (Ab_C1_t_nM * V_C1_Ab * BW / SF)
+  DAR2 <- (Ab_C1_f * 0 + ({{Drug_C1_b}}) + ({{Drug_C1_m}}) + ({{DAR1}}) + ({{DAR2}}) + {{Drug_C1_combi3}} * 4) / (Ab_C1_t_nM * V_C1_Ab)
   
   # Ordinary differential equations ------------------------------
   ########################

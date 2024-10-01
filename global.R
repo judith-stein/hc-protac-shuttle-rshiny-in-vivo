@@ -144,7 +144,6 @@ SimThis <- function(input, conditions, parameters) {
     function(x) x / initialParameters["V_C2_Ab"]
   )
   
-  
   return(list(numericalSolution = numericalSolution, fittingResults = fitval))
 }
 
@@ -444,18 +443,39 @@ MakePlot3 <- function(simData, vis, title, max) {
 }
 
 # Plot with experimental data
-ExpPlot <- function(simData, input, title) {
+ExpPlot <- function(simData, input, title, PK = NULL) {
   
-  experimentalData <- LoadExpData(input$expDataAsString)
-  
-  mfigure <- ggplot() +
-    geom_line(data=simData, aes(x=time/24, y=V_tumor_mm3, color="Sim")) +
-    geom_point(data=experimentalData, aes(x=time, y=V_tumor_mm3, color="Exp")) +
-    geom_ribbon(data=experimentalData, aes(x=time, y=V_tumor_mm3, ymin=V_tumor_mm3-dev,ymax=V_tumor_mm3+dev), fill="lightblue", alpha=0.5) +
-    theme(legend.position="right") +
-    scale_color_manual(name  = "", values = c("blue", "red"), labels = c("Sim", "Exp")) +
-    ggtitle(title) +
-    labs(x = "Time (days)", y = paste0("Tumor volume (mm", tags$sup("3"), ")")) 
+  if (is.na(PK)) {
+    experimentalData <- LoadExpData(input$expDataAsString)
+    mfigure <- ggplot() +
+      geom_line(data=simData, aes(x=time/24, y=V_tumor_mm3, color="Sim")) +
+      geom_point(data=experimentalData, aes(x=time, y=V_tumor_mm3, color="Exp")) +
+      geom_ribbon(data=experimentalData, aes(x=time, y=V_tumor_mm3, ymin=V_tumor_mm3-dev,ymax=V_tumor_mm3+dev), fill="lightblue", alpha=0.5) +
+      theme(legend.position="right") +
+      scale_color_manual(name  = "", values = c("blue", "red"), labels = c("Sim", "Exp")) +
+      ggtitle(title) +
+      labs(x = "Time (days)", y = paste0("Tumor volume (mm", tags$sup("3"), ")")) 
+  } else {
+    experimentalData <- LoadExpData(input$expDataAsString2)
+    # test <- simData[simData$time %in% as.vector(c(0,experimentalData$time)), "ngmL_Ab_C1_t"]
+    mfigure <- ggplot() +
+      geom_point(data=experimentalData, aes(x=time, y=V_tumor_mm3, color="Exp")) +
+      geom_ribbon(data=experimentalData, aes(x=time, y=V_tumor_mm3, ymin=V_tumor_mm3-dev,ymax=V_tumor_mm3+dev), fill="lightblue", alpha=0.5) +
+      theme(legend.position="right") +
+      scale_color_manual(name  = "", values = c("blue", "red"), labels = c("Sim", "Exp")) +
+      ggtitle(title) +
+      labs(x = "Time (h)", y = paste0(input$molecule, " concentration in plasma (ng/mL)")) +
+      scale_y_log10()
+    
+    if(input$molecule == "Ab_C1_t") {
+      mfigure <- mfigure +
+        geom_line(data=simData, aes(x=time, y=ngmL_Ab_C1_t, color="Sim"))
+    } else {
+      mfigure <- mfigure +
+        geom_line(data=simData, aes(x=time, y=ngmL_Drug_C1_t, color="Sim"))
+    }
+
+  }
   
   return(mfigure)
 }

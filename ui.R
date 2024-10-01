@@ -207,7 +207,23 @@ ui <- shinyUI(dashboardPage(
                        numericInput("dose_Drug", "Single dose of free Protac Drug_C1_f (mg/kg)", value = 0),
                        "Both doses should lead to equal protac amount, see text output below",
                        plotlyOutput(outputId = "plotPaper", width = 600 * 1, height = 450 * 0.8), br(),
-                       verbatimTextOutput(outputId = "start"), 
+                       verbatimTextOutput(outputId = "start")
+              ),
+              tabPanel("PK",
+                       helpText("Comparison of PK of Drug and Shuttle", style = "caption-side: top; text-align: center; color:black;font-size:125%"), br(),
+                       radioButtons("molecule",
+                                    "Select the molecule for the plasma concentration in the experimental data below:",
+                                    choiceNames = list(HTML(paste0("Ab", tags$sub("t"), tags$sup("C1"), " (ng/mL)")), HTML(paste0("Drug", tags$sub("t"), tags$sup("C1"), " (ng/mL)"))),
+                                    choiceValues = list("Ab_C1_t", "Drug_C1_t"),
+                                    selected = c("Drug_C1_t")
+                       ),
+                       textAreaInput("expDataAsString2", 
+                                     HTML("Input: time (hours) &lt;space&gt; plasma concentration (ng/mL) &lt;space&gt; deviance <br/> (space delimited and comma as decimals)"),
+                                     value = defaultExpDataAsString,
+                                     rows = 6
+                       ),
+                       plotlyOutput(outputId = "plotExpData2", width = 800 * 1, height = 600 * 0.8),
+                       verbatimTextOutput(outputId = "AUC")
               )
             )
           )

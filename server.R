@@ -213,7 +213,7 @@ server <- function(input, output, session) {
       write.table(parameterTable %>% select(Parameter, Value), file, quote = FALSE, row.names = FALSE, col.names = FALSE, sep = ",", append = T)
       
       write("\n# Other inputs", file, append = TRUE)
-      for (name in c("maxTime", "doseTo", "dose", "doseDrug", "doseT", "doseMaxT", "startT", "max", "fitting", "dose_ADC", "dose_Drug")) {
+      for (name in c("maxTime", "doseTo", "dose", "doseDrug", "doseT", "doseMaxT", "startT", "max", "fitting", "dose_ADC", "dose_Drug", "molecule")) {
         # Hardcoded because no distinction between important and unimportant shiny-inputs
         write(paste(name, input[[name]], sep = ","), file, append = TRUE)
       }
@@ -290,7 +290,7 @@ server <- function(input, output, session) {
               # eg. "10^9/(6.023*10^23)" -> 1.660302e-15
               numericValue <- StringToNumeric(rawValue)
               UpdateDTTable(name, numericValue) # Updates tables
-              if (name %in% c("fitting")) {
+              if (name %in% c("fitting", "molecule")) {
                 updateRadioButtons(session, inputId = name, selected = c(rawValue))
               } else if (name %in% names(input)) {
                 # For other inputs (not in tables but eg. numericInput shiny elements)
@@ -412,6 +412,10 @@ server <- function(input, output, session) {
     ExpPlot(RunSim()$numericalSolution, input, "Comparison of simulation with experimental data")
   })
   
+  output$plotExpData2 <- renderPlotly({
+    ExpPlot(RunSim()$numericalSolution, input, "Comparison of simulation with experimental data", "PK")
+  })
+  
   output$plotDAR <- renderPlotly({
     input$update
     isolate({
@@ -455,5 +459,17 @@ server <- function(input, output, session) {
 start amount with Shuttle:", data[[2]]$start[1], "nmol")
   })
   
+  output$AUC <- renderPrint({
+    data <- RunSim()$numericalSolution
+    if(input$molecule == "Ab_C1_t") {
+      auc <- auc(data$time, data$ngmL_Ab_C1_t)[1]
+      str1 <- paste("AUC of Ab_C1_t =", auc, "ng/mL*h")
+    } else {
+      auc <- auc(data$time, data$ngmL_Drug_C1_t)[1]
+      str1 <- paste("AUC of Drug_C1_t =", auc, "ng/mL*h")
+    }
+    
+    cat(paste(str1, sep = "\n"))
+  })
 
 }
