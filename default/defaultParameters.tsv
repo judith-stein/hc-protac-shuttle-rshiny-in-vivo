@@ -65,7 +65,7 @@ E_Meta		0.44	Unitless	"Tumor void volume for Metabolite"
 R_Cap		8.0	um		"Radius of tumor blood capillary"
 R_Krogh		75.0	um		"Average distance between two capillaries"
 NCL_tumor	1e+11 	"1/L" 		"Number of cells per litre of tumor, assuming that a gram of tumor has 10^8 cells. "
-
+K_ADC_dec	0.001	1/h		"Non-specific deconjugation of Protac from ADC"
 
 
 

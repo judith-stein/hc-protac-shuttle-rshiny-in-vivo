@@ -253,7 +253,7 @@ SimThisPaper <- function(input, conditions, parameters) {
     } else {
       # shuttle
       # % of mean DAR / DAR(0) * 100 with DAR(0) = 2 ignoring Drug_C1_f
-      numericalSolution["perc"] <- numericalSolution["DAR"] / 2 * 100
+      numericalSolution["perc"] <- numericalSolution["DAR1"] / 2 * 100
       numericalSolution["start"] <- numericalSolution["Ab_C1_b2"] * initialParameters["BW"] * 2 # convert nmol/kg in nmol, then * 2, since 2 bound Protacs per Ab
     }
     
@@ -307,7 +307,7 @@ SimThisMultiple <- function(input, conditions, parameters) {
 # Plasma and rest
 MakePlot1 <- function(simData, vis, title, max) {
   mfigure <- plot_ly(simData, x = ~ time / 24, y = ~V_tumor_mm3, name = "V_tumor (mm^3)", type = "scatter", mode = "lines", visible = vis[1]) %>%
-    add_trace(y = ~DAR, name = "Mean DAR in C1 (Drug)", mode = "lines", visible = "legendonly") %>%
+    add_trace(y = ~DAR1, name = "Mean DAR in C1 (Drug)", mode = "lines", visible = "legendonly") %>%
     add_trace(y = ~DAR2, name = "Mean DAR in C1 (Drug + Meta1)", mode = "lines", visible = "legendonly") %>%
     add_trace(y = ~Ab_C1_f_nM, name = "Ab_C1_f (nM)", mode = "lines", visible = vis[2]) %>%
     add_trace(y = ~Ab_C1_f, name = "Ab_C1_f (nmol/kg)", mode = "lines", visible = "legendonly") 
@@ -395,6 +395,13 @@ MakePlot1 <- function(simData, vis, title, max) {
     add_trace(y = ~V_tumor_dyi_1_mm3, name = "V_tumor_dyi_1_mm3", mode = "lines", visible = vis[23]) %>%
     add_trace(y = ~V_tumor_dyi_2_mm3, name = "V_tumor_dyi_2_mm3", mode = "lines", visible = vis[24]) %>%
     add_trace(y = ~V_tumor_dyi_3_mm3, name = "V_tumor_dyi_3_mm3", mode = "lines", visible = vis[25]) %>%
+    add_trace(y = ~DAR, name = "DAR", mode = "lines", visible = "legendonly") %>%
+    add_trace(y = ~ADC_C1_f, name = "ADC_C1_f (nmol/kg)", mode = "lines", visible = "legendonly") %>%
+    add_trace(y = ~ADC_C1_b1, name = "ADC_C1_b1 (nmol/kg)", mode = "lines", visible = "legendonly") %>%
+    add_trace(y = ~ADC_C1_b2, name = "ADC_C1_b2 (nmol/kg)", mode = "lines", visible = "legendonly") %>%
+    add_trace(y = ~ADC_ex_f, name = "ADC_ex_f (nM)", mode = "lines", visible = "legendonly") %>%
+    add_trace(y = ~ADC_ex_b1, name = "ADC_ex_b1 (nM)", mode = "lines", visible = "legendonly") %>%
+    add_trace(y = ~ADC_ex_b2, name = "ADC_ex_b2 (nM)", mode = "lines", visible = "legendonly") %>%
     layout(
       margin = list(t = 50), title = title,
       xaxis = list(title = "Time (days)"),
@@ -523,7 +530,7 @@ ExpPlot <- function(simData, input, title, PK = NULL) {
 # Mean DAR in plasma
 MakePlotDAR <- function(allData, title) {
   
-  mfigure <- plot_ly(allData[[1]], x = ~ time / 24, y = ~DAR, name = paste0("KD = ", allData[[1]]$K_Ab_Drug_off[1], ", Dose = ", allData[[1]]$Dose[1], ", CL = ", allData[[1]]$CL_Drug[1]), type = "scatter", mode = "lines") %>%
+  mfigure <- plot_ly(allData[[1]], x = ~ time / 24, y = ~DAR1, name = paste0("KD = ", allData[[1]]$K_Ab_Drug_off[1], ", Dose = ", allData[[1]]$Dose[1], ", CL = ", allData[[1]]$CL_Drug[1]), type = "scatter", mode = "lines") %>%
     layout(
       margin = list(t = 50), title = title,
       xaxis = list(title = "Time (days)"),
@@ -533,7 +540,7 @@ MakePlotDAR <- function(allData, title) {
   
   if (length(allData) > 1) {
     for (i in 2:length(allData)) {
-      mfigure <- add_trace(mfigure, data = allData[[i]], y = ~DAR, name = paste0("KD = ", allData[[i]]$K_Ab_Drug_off[1], ", Dose = ", allData[[i]]$Dose[1], ", CL = ", allData[[i]]$CL_Drug[1]), mode = "lines")
+      mfigure <- add_trace(mfigure, data = allData[[i]], y = ~DAR1, name = paste0("KD = ", allData[[i]]$K_Ab_Drug_off[1], ", Dose = ", allData[[i]]$Dose[1], ", CL = ", allData[[i]]$CL_Drug[1]), mode = "lines")
     }
   }
   
@@ -564,7 +571,7 @@ MakePlotMult <- function(allData, input, DAR = NULL) {
     title <- "Total PROTAC concentration in plasma"
     yaxis <- "Drug_C1_t (ng/mL)"
   } else {
-    y <- "DAR"
+    y <- "DAR1"
     title <- "Mean DAR in plasma (only PROTAC)"
     yaxis <- "DAR"
   }

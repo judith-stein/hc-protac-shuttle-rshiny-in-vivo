@@ -335,7 +335,7 @@ server <- function(input, output, session) {
   RunSim <- reactive({
     input$update
     isolate({
-      validate(need(parse_number(gsub("C1", "", input$doseTo)) <= input$max || input$doseTo == "Ab_C1_f", "x in bx of dose for PROxAb <= max. number of bound protacs per antibody!"))
+      validate(need(parse_number(gsub("C1", "", input$doseTo)) <= input$max || input$doseTo == "Ab_C1_f" || input$doseTo == "ADC_C1_f", "x in bx of dose for PROxAb <= max. number of bound protacs per antibody!"))
       withProgress({
         setProgress(message = "Calculating...")
         
@@ -360,7 +360,7 @@ server <- function(input, output, session) {
   RunSimMult <- reactive({
     input$update
     isolate({
-      validate(need(parse_number(gsub("C1", "", input$doseTo)) <= input$max || input$doseTo == "Ab_C1_f", "x in bx of dose for PROxAb <= max. number of bound protacs per antibody!"))
+      validate(need(parse_number(gsub("C1", "", input$doseTo)) <= input$max || input$doseTo == "Ab_C1_f" || input$doseTo == "ADC_C1_f", "x in bx of dose for PROxAb <= max. number of bound protacs per antibody!"))
       withProgress({
         setProgress(message = "Calculating...")
         

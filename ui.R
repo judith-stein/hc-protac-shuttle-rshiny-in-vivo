@@ -83,7 +83,7 @@ ui <- shinyUI(dashboardPage(
               numericInput("maxTime", "Max t (days)", value = 52),
               selectInput("doseTo", "Dose of which PROxAb:",
                           list(
-                            "Ab_C1_f", "Ab_C1_b1", "Ab_C1_b2", "Ab_C1_b3", "Ab_C1_b4"
+                            "Ab_C1_f", "Ab_C1_b1", "Ab_C1_b2", "Ab_C1_b3", "Ab_C1_b4", "ADC_C1_f"
                           ),
                           selected = "Ab_C1_b1"
               ),
@@ -98,7 +98,7 @@ ui <- shinyUI(dashboardPage(
               numericInput("doseMaxT", "For a total number of times of (1 + x)", value = 0),
               numericInput("startT", "Dosing start time (h)", value = 0), 
               numericInput("max", "Max. number of bound protacs per antibody", value = 2),
-              "min=1 and max=4"
+              "min=1 and max=4 and ADC always has 2 free arms"
             )
           ),
           br(),
