@@ -1422,7 +1422,7 @@ paste0(""))
  
    # Total antibody concentration in tumor
   Ab_ex_t <- Ab_ex_f + {{Ab_ex_t1}} + {{Drug_ex_combi1}} + {{Drug_ex_combi2}} + {{Drug_ex_combi3}} 
-            #+ (Ab_cell_f_b_ag + Ab_cell_b1_b_ag + Ab_cell_m1_b_ag + {{Ab_ex_f}} + {{Ab_ex_f_combi1}} + {{Ab_ex_f_combi2}} + {{Ab_ex_f_combi3}}) * NC_Tumor * SF / V_tumor
+            + (Ab_cell_f_b_ag + Ab_cell_b1_b_ag + Ab_cell_m1_b_ag + {{Ab_ex_f}} + {{Ab_ex_f_combi1}} + {{Ab_ex_f_combi2}} + {{Ab_ex_f_combi3}}) * NC_Tumor * SF / V_tumor
             # no Ab_cell_lyso_i, since no degradation in lysosome of antibody
   ngmL_Ab_ex_t <- Ab_ex_t * 1e-03 * MW_Ab
  
