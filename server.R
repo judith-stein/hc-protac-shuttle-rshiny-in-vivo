@@ -431,6 +431,10 @@ server <- function(input, output, session) {
     ExpPlot(RunSim()$numericalSolution, input, "Comparison of simulation with experimental data", "PK")
   })
   
+  output$plotExpData3 <- renderPlotly({
+    ExpPlot(RunSim()$numericalSolution, input, "Comparison of simulation with experimental data", "PK", "Tumor")
+  })
+  
   output$plotDAR <- renderPlotly({
     input$update
     isolate({

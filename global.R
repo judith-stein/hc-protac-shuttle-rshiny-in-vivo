@@ -490,7 +490,7 @@ MakePlot3 <- function(simData, vis, title, max) {
 }
 
 # Plot with experimental data
-ExpPlot <- function(simData, input, title, PK = NULL) {
+ExpPlot <- function(simData, input, title, PK = NULL, Tumor = NULL) {
   
   if (is.na(PK)) {
     experimentalData <- LoadExpData(input$expDataAsString)
@@ -511,16 +511,31 @@ ExpPlot <- function(simData, input, title, PK = NULL) {
       theme(legend.position="right") +
       scale_color_manual(name  = "", values = c("blue", "red"), labels = c("Sim", "Exp")) +
       ggtitle(title) +
-      labs(x = "Time (h)", y = paste0(input$molecule, " concentration in plasma (ng/mL)")) +
       scale_y_log10()
-    
-    if(input$molecule == "Ab_C1_t") {
-      mfigure <- mfigure +
-        geom_line(data=simData, aes(x=time, y=ngmL_Ab_C1_t, color="Sim"))
+
+    if (is.null(Tumor)) {
+      if(input$molecule == "Ab_C1_t") {
+        mfigure <- mfigure +
+          geom_line(data=simData, aes(x=time, y=ngmL_Ab_C1_t, color="Sim")) +
+          labs(x = "Time (h)", y = paste0(input$molecule, " concentration in plasma (ng/mL)")) 
+      } else {
+        mfigure <- mfigure +
+          geom_line(data=simData, aes(x=time, y=ngmL_Drug_C1_t, color="Sim")) +
+          labs(x = "Time (h)", y = paste0(input$molecule, " concentration in plasma (ng/mL)")) 
+      }
     } else {
-      mfigure <- mfigure +
-        geom_line(data=simData, aes(x=time, y=ngmL_Drug_C1_t, color="Sim"))
+      if(input$molecule == "Ab_C1_t") {
+        mfigure <- mfigure +
+          geom_line(data=simData, aes(x=time, y=ngmL_Ab_ex_t, color="Sim")) +
+          labs(x = "Time (h)", y = paste0("Ab_ex_t concentration in tumor (ng/mL)")) 
+      } else {
+        mfigure <- mfigure +
+          geom_line(data=simData, aes(x=time, y=ngmL_Drug_ex_t, color="Sim")) +
+          labs(x = "Time (h)", y = paste0("Drug_ex_t concentration in tumor (ng/mL)")) 
+      }
     }
+    
+
     
   }
   

@@ -394,6 +394,10 @@ BuildModelForN <- function(max = 1) {
                      paste0("Ab_C2_b3_m1"), 
                      paste0("0"))
   
+  Ab_ex_t1 <- ifelse(max >= 1, 
+                     paste0("Ab_ex_b", 1:max, " + Ab_ex_m", 1:max, collapse=" + "), 
+                     paste0("0"))
+  
   Ab_C1_b1KD <- ifelse(max >= 2, 
                        paste0("- K_Ab_Drug_on * (max - 1) * Ab_C1_b1 * Drug_C1_f + K_Ab_Drug_off * Ab_C1_b2
                               - K_Ab_Meta_on * (max - 1) * Ab_C1_b1 * Meta1_C1_f
@@ -655,6 +659,19 @@ paste0(""))
                            paste0("Ab_C1_b3_m1"), 
                            paste0("0"))
   
+  Drug_ex_b <- ifelse(max >= 1, 
+                      paste0("Ab_ex_b", 1:max, " * ", 1:max, collapse=" + "), 
+                      paste0("0"))
+  Drug_ex_combi1 <- ifelse(max >= 2, 
+                           paste0("Ab_ex_b1_m", 1:(max-1), collapse=" + "), 
+                           paste0("0"))
+  Drug_ex_combi2 <- ifelse(max >= 3, 
+                           paste0("Ab_ex_b2_m", 1:(max-2), collapse=" + "), 
+                           paste0("0"))
+  Drug_ex_combi3 <- ifelse(max == 4, 
+                           paste0("Ab_ex_b3_m1"), 
+                           paste0("0"))
+  
   Drug_C1_f <- ifelse(max >= 1, 
                       paste0("(CL_Ab * ((", Drug_C1_b,") + (", Drug_C1_combi1, ") + (", Drug_C1_combi2, ") * 2 + ", Drug_C1_combi3, " * 3) / V_C1_Ab) / V_C1_Drug"), 
                       paste0(""))
@@ -820,6 +837,10 @@ paste0(""))
                            paste0("0"))
   Ab_ex_f <- ifelse(max >= 2, 
                     paste0("Ab_cell_b", 2:max,"_b_ag + Ab_cell_m", 2:max,"_b_ag", collapse=" + "), 
+                    paste0("0"))
+  
+  Drug_cell_b <- ifelse(max >= 1, 
+                    paste0("Ab_cell_b", 1:max,"_b_ag * ", 1:max, collapse=" + "),
                     paste0("0"))
   
   Ab_ex_b1KD <- ifelse(max >= 2, 
@@ -1399,9 +1420,21 @@ paste0(""))
   # Total antibody concentration in peripheral compartment
   Ab_C2_t_nM <- (Ab_C2_f + {{Ab_C2_t1}} + {{Ab_C2_t2}} + {{Ab_C2_t3}} + {{Ab_C2_t4}}) / V_C2_Ab
  
+   # Total antibody concentration in tumor
+  Ab_ex_t <- Ab_ex_f + {{Ab_ex_t1}} + {{Drug_ex_combi1}} + {{Drug_ex_combi2}} + {{Drug_ex_combi3}} 
+            #+ (Ab_cell_f_b_ag + Ab_cell_b1_b_ag + Ab_cell_m1_b_ag + {{Ab_ex_f}} + {{Ab_ex_f_combi1}} + {{Ab_ex_f_combi2}} + {{Ab_ex_f_combi3}}) * NC_Tumor * SF / V_tumor
+            # no Ab_cell_lyso_i, since no degradation in lysosome of antibody
+  ngmL_Ab_ex_t <- Ab_ex_t * 1e-03 * MW_Ab
+ 
   # Total Protac in plasma
   Drug_C1_t <- Drug_C1_f / SF * V_C1_Drug * BW + Drug_C1_b_ntp / SF * V_C1_Drug * BW + ({{Drug_C1_b}}) / SF * BW + ({{Drug_C1_combi1}}) * 1 / SF * BW + ({{Drug_C1_combi2}}) * 2 / SF * BW + {{Drug_C1_combi3}} * 3 / SF * BW
   ngmL_Drug_C1_t <- Drug_C1_t * MW_Drug * SF / V_C1_Drug / BW * 1e-03
+ 
+   # Total Protac in tumor
+  Drug_ex_t <- Drug_ex_f / SF + ({{Drug_ex_b}}) / SF * V_tumor + ({{Drug_ex_combi1}}) * 1 / SF * V_tumor + ({{Drug_ex_combi2}}) * 2 / SF * V_tumor + {{Drug_ex_combi3}} * 3 / SF * V_tumor
+               + ({{Drug_cell_b}} + {{Ab_ex_f_combi1}} + ({{Ab_ex_f_combi2}}) * 2 + {{Ab_ex_f_combi3}} * 3) * NC_Tumor
+               + (Drug_cell_lyso_f + Drug_cell_cyto_f + Drug_cell_cyto_b_dt) * NC_Tumor
+  ngmL_Drug_ex_t <- Drug_ex_t * MW_Drug * SF / V_tumor * 1e-03
  
   # Total ADC amount in plasma
   ADC_C1_t <- (ADC_C1_f + ADC_C1_b1 + ADC_C1_b2 + ADC_C1_m1 + ADC_C1_m2 + ADC_C1_b1_m1)

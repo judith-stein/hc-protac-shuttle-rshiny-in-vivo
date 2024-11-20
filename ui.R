@@ -223,7 +223,8 @@ ui <- shinyUI(dashboardPage(
                                      rows = 6
                        ),
                        plotlyOutput(outputId = "plotExpData2", width = 800 * 1, height = 600 * 0.8),
-                       verbatimTextOutput(outputId = "AUC")
+                       verbatimTextOutput(outputId = "AUC"),
+                       plotlyOutput(outputId = "plotExpData3", width = 800 * 1, height = 600 * 0.8),
               ),
               tabPanel("Multiple Dosing",
                        textAreaInput("multiDoseAsString",
